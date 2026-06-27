@@ -1,8 +1,10 @@
 # agent-hify 总体设计文档
 
-> 版本：v0.4（架构设计定稿）｜ 日期：2026-06-26
+> 版本：v0.5（架构设计定稿）｜ 日期：2026-06-27
 > 状态：架构设计已定稿，进入工程搭建
-> 配套：[METHODOLOGY.md](./METHODOLOGY.md) · [CLAUDE.md](./CLAUDE.md) · [docs/competitive-brief-agent-platforms.md](./docs/competitive-brief-agent-platforms.md)
+> 配套：[METHODOLOGY.md](./METHODOLOGY.md) · [CLAUDE.md](./CLAUDE.md) · [docs/standards.md](./docs/standards.md)（工程细则权威） · [docs/competitive-brief-agent-platforms.md](./docs/competitive-brief-agent-platforms.md)
+
+> **v0.5 变更摘要**（2026-06-27 设计评审）：补足外部调用韧性（§16）、每层职责（§6.4）、大表预判（§12.2）、可扩展性演进（§17）；统一响应改企业式 `ApiResponse[T]`+错误码体系+空值规范（§9）；引入选择性软删除（§10）；分页改混合（游标/offset，§9.4）。数据表/索引/分页/接口/外部调用的**逐条细则统一落在 [docs/standards.md](./docs/standards.md)**，本文件只留架构与决策。
 
 ## 目录
 1. 背景与目标
@@ -10,18 +12,20 @@
 3. 功能范围
 4. 技术选型与编码规范
 5. 总体架构（模块化单体 + core 基础层）
-6. 模块职责边界、依赖分层与跨模块调用规范
+6. 模块职责边界、依赖分层与跨模块调用规范（含 §6.4 每层职责）
 7. 数据流向
 8. 代码组织
-9. 接口契约
+9. 接口契约（统一响应 / 错误码 / 空值 / 分页）
 10. 数据模型（定稿）
 11. 索引策略（定稿）
-12. 性能预判
+12. 性能预判与大表预判
 13. 运维预期
 14. 第一阶段 P0 范围
 15. 错误处理与测试策略
+16. 外部调用韧性（超时 / 重试 / 熔断 / 隔离）
+17. 可扩展性与演进路径
 
-> **方法论阶段映射**：§1–4、13=文字归档；§5–12=架构设计；行为指令见 CLAUDE.md；§14 起进入工程搭建/功能实现。
+> **方法论阶段映射**：§1–4、13=文字归档；§5–12、16–17=架构设计；行为指令见 CLAUDE.md；§14 起进入工程搭建/功能实现。
 
 ---
 
@@ -165,6 +169,22 @@ flowchart TD
 6. **路由薄**：`router.py` 只做鉴权+参数校验+调用本模块 service，不写业务、不跨模块编排；跨模块编排只发生在 `runtime`。
 7. **异步任务**：模块通过 `worker` 中定义的 Celery 任务入队；任务体内调用模块 service（不跨边界直连 repository）。
 
+### 6.4 每层职责边界（按层而非按模块）
+
+§6.2 是按模块的 owns/not-owns；这里是按**层**的职责与可依赖范围，明确"谁能调谁、谁不写什么"。
+
+| 层 | 核心职责 | 可依赖 | 禁止 |
+|---|---|---|---|
+| **L0 core** | 横切基础设施：配置、DB session/Base、异常体系+处理器、安全(加密/哈希/token)、日志、公共类型、外部调用韧性包装(§16) | 仅标准库/第三方 | 任何业务逻辑、任何业务表 |
+| **L1 identity / observability** | identity：认证/工作区/角色；observability：trace/usage/评估钩子（横切，可被任意上层向下调用） | core | 互相依赖业务；observability 不反向驱动业务 |
+| **L2 models / tools** | 能力提供：模型网关调用、工具注册与调用 | core, identity, observability | 持有会话/消息；决定"何时被用" |
+| **L2' knowledge** | RAG：摄取/分块/检索 | + models（embed） | 生成式编排；决定"谁用哪个 KB" |
+| **L3 apps** | 仅持久化应用**配置**（以 id 引用 model/kb/tool） | core, identity | 依赖/调用 runtime/models/knowledge/tools；执行 |
+| **L4 runtime** | **唯一跨模块编排者**：读 apps 配置→调 models/knowledge/tools→组装 content-block→流式；持有 conversations/messages | core, apps, models, knowledge, tools, observability | 被下层依赖（无人依赖 runtime） |
+| **L5 API 装配** | main 挂载 router/中间件/异常处理器/OpenAPI；各模块 `router` 鉴权+校验+调本模块 service | 各自模块 service + core | 在 router 写业务或跨模块编排（编排只在 runtime） |
+
+**一句话规则**：能力模块（L2/L2'）互不感知，只被 runtime 编排；`apps` 只存配置不执行；跨模块组合**只在 runtime**；横切只在 core 与 observability。
+
 ---
 
 ## 7. 数据流向
@@ -287,16 +307,38 @@ frontend/
 
 ## 9. 接口契约
 
+> 接口/数据/分页/错误码/空值的**逐条细则与核查清单见 [docs/standards.md](./docs/standards.md)**；本节只给架构级约定。
+
 ### 9.1 对外 HTTP API（OpenAPI 为单一事实来源）
 - 后端用 FastAPI + Pydantic 定义 → 暴露 `/openapi.json` → 前端用 **orval** 生成 TS 类型与 TanStack Query hooks。**前端不手写接口类型**，从根上消除漂移。
 - 风格：REST，资源化复数 URL，前缀 `/api/v1`；字段 `snake_case`；时间 ISO-8601 UTC。
 - 鉴权：登录后 Bearer Token；除登录/health 外均需鉴权。
-- **统一错误信封**：`{ "error": { "code": "...", "message": "...", "details": {} } }` + 恰当 HTTP 状态。
-- **分页**：`?page=&page_size=`（默认 20）→ `{ items, total, page, page_size }`（`Page[T]`）。
-- **流式（SSE）**事件：`message`(token) / `step`(Agent 步骤) / `usage` / `done` / `error`。
 - 版本：路径 `/api/v1`，破坏性变更升版本。
 
-### 9.2 模块间内部契约（Python）
+### 9.2 统一响应（`ApiResponse[T]`，始终 HTTP 200）
+所有业务接口统一包装为 `ApiResponse[T]`，**HTTP 状态始终 200**，成败由整数 `code` 区分（`0`=成功）：
+```jsonc
+{ "code": 0,     "message": "ok",     "data": { /* T：资源 或 分页结构 */ } }   // 成功
+{ "code": 33001, "message": "模型不存在", "data": null, "details": {} }            // 失败
+```
+- 用 Pydantic 泛型 `ApiResponse[T]` 定义，OpenAPI 可描述、orval 可生成类型；前端取 `resp.data`、按 `resp.code` 判错。
+- **例外**：`/health` 等探针按真实 HTTP 状态（供 Docker/LB 判活）；SSE 走事件协议（§9.5）。
+- **空值规范**：列表空→`[]`、字符串空→`""`、对象不存在→`null`（细则见 standards §6.3）。
+
+### 9.3 错误码体系（按模块分段）
+- `code` = 5 位 `M K NNN`：`M`(1位)=模块域(1 公用·2 identity·3 models·4 knowledge·5 tools·6 apps·7 runtime·8 observability)、`K`(1位)=类别(0 参数·1 鉴权·2 权限·3 资源·4 业务·5 限流·9 外部/系统)、`NNN`(3位)=模块内序号。**首位即定位出错模块**。集中登记在 `core/error_codes.py`，每码对应常量名。
+- 与 `AppError(code:int, reason, message, http_status=200, details)` 对应，core 中央处理器统一转 §9.2 信封。
+- 全量码表见 [standards §6.4](./docs/standards.md)；示例：`33001 MODEL_NOT_FOUND`、`34001 EMBEDDING_DIM_MISMATCH`、`39001 MODEL_AUTH_FAILED`、`19002 EXTERNAL_TIMEOUT`、`19003 CIRCUIT_OPEN`。
+
+### 9.4 分页（混合：游标 / offset）
+- **大/追加型**（messages/conversations/traces）：**游标分页** `{ items, next_cursor, has_more }`，游标=`(created_at,id)`。
+- **小配置列表**（models/apps/kb/tools/users）：offset `?page=&page_size=`（默认 20）→ `{ items, total, page, page_size }`；**`total` 仅第一页查询返回**，翻页不复查。
+- 细则见 standards §5。
+
+### 9.5 流式（SSE）
+事件：`message`(token) / `step`(Agent 步骤) / `usage` / `done` / `error`。错误经 `error` 事件下发（不套 `ApiResponse`）。
+
+### 9.6 模块间内部契约（Python）
 - 以**类型化 service 函数 + Pydantic DTO** 通信；不跨边界传 ORM。
 - 关键 DTO 与签名：
   - `ContentBlock`（联合类型，见 §10.2）。
@@ -305,9 +347,9 @@ frontend/
   - `knowledge.retrieve(kb_id, query, top_k=5, threshold=None) -> list[RetrievedChunk]`。
   - `tools.call_tool(tool_id, args: dict) -> ToolResult`；`tools.get_specs(ids) -> list[ToolSpec]`。
   - `observability.trace(type, input, output, metrics, status, **ctx)`。
-- **错误契约**：core 定义异常基类 `AppError(code, message, http_status, details)`，子类 `NotFoundError/ValidationError/PermissionError/ExternalServiceError/RateLimitError`；各模块抛类型化异常，core 处理器统一转 §9.1 信封。错误码集中登记（如 `MODEL_AUTH_FAILED`、`KB_NOT_FOUND`、`TOOL_TIMEOUT`）。
+- **错误契约**：core 定义异常基类 `AppError(code:int, reason, message, http_status=200, details)`，子类 `NotFoundError/ValidationError/PermissionError/ExternalServiceError/RateLimitError/CircuitOpenError`；各模块抛类型化异常，core 处理器统一转 §9.2 信封（始终 HTTP 200，错误码见 §9.3）。
 
-### 9.3 扩展契约（插件机制）
+### 9.7 扩展契约（插件机制）
 - 新模型厂商：实现 Provider 适配器接口（或纯 LiteLLM 配置）。
 - 新工具：实现 `Tool` 协议（`spec() -> ToolSpec`，`call(args) -> ToolResult`），内置/API/MCP 三类统一。
 
@@ -321,7 +363,9 @@ frontend/
 - **多工作区预埋**：所有顶层业务表含 `workspace_id`（FK，默认 `default`，UI 不暴露切换）。
 - **枚举**：用字符串 + CHECK 约束（迁移友好，胜过 PG enum 的改动成本）。
 - **JSON**：用 `JSONB`。
-- **删除**：v1 物理删除（不做软删，YAGNI；级联见 FK）。
+- **删除（选择性软删除，D1=A）**：**配置/用户可见表**（apps/knowledge_bases/models/model_providers/tools/users）含 `deleted_at timestamptz NULL`，软删除可恢复+留痕；查询默认过滤 `deleted_at IS NULL`，**唯一约束改为部分唯一索引** `WHERE deleted_at IS NULL`。**追加型日志/派生表**（traces/messages/conversations/usage_daily/chunks/documents/annotations）物理删除/归档（级联见 FK）。明细分类见 [standards §2](./docs/standards.md)。
+
+> 下表 UNIQUE 标注的配置表，落地时一律实现为"部分唯一索引（`WHERE deleted_at IS NULL`）"以与软删共存。
 
 | 表 | 列（类型 / 约束） |
 |---|---|
@@ -364,8 +408,11 @@ frontend/
   - `conversations(app_id, created_at desc)` — 会话列表
   - `traces(workspace_id, app_id, created_at desc)` — 可观测查询
   - `chunks(kb_id)` — 检索前置过滤
-- **唯一约束**：见 §10 各表 UNIQUE（防重复 provider/kb/tool/用户邮箱）。
+- **唯一约束**：见 §10 各表 UNIQUE（防重复 provider/kb/tool/用户邮箱）；软删配置表实现为部分唯一索引（`WHERE deleted_at IS NULL`）。
+- **软删字段入索引**：软删表的高频复合索引纳入 `deleted_at`（或建部分索引），保证默认过滤走索引。
 - JSONB 如需按键查询（如 `models.capabilities` 含 vision）可加 **GIN 索引**；v1 数据量小，按需再加。
+
+> **索引设计规范（必须遵守）**：等值列在前/范围列在后；逻辑删除字段入索引；唯一性用 UNIQUE INDEX 不靠代码层；禁止在大文本字段（`chunks.content` 等）建索引；多对多关联表两向都建索引（本项目 apps 用 JSONB 数组引用，非关联表，不适用）。逐条与核查清单见 [standards §3](./docs/standards.md)。
 
 ### 11.2 向量索引（pgvector）
 - `chunks.embedding` 用 **HNSW**（pgvector ≥0.5，质量/延迟均衡，免训练），操作符类 **`vector_cosine_ops`**（余弦相似）。
@@ -387,7 +434,9 @@ pgvector 列维度固定，而不同 embedding 模型维度不同（如 1536 / 1
 
 ---
 
-## 12. 性能预判（50 人内）
+## 12. 性能预判与大表预判（50 人内）
+
+### 12.1 性能预算
 
 | 指标 | 预算 | 说明 |
 |---|---|---|
@@ -397,7 +446,18 @@ pgvector 列维度固定，而不同 embedding 模型维度不同（如 1536 / 1
 | RAG 检索 | < 200ms（语料 < ~10 万 chunk） | HNSW 索引；超量调 `ef_search`/分区 |
 | 文档摄取 | 异步无硬 SLA，前端显进度 | 受 embedding API 限速；限单文件大小 |
 
-**瓶颈认知**：延迟主要来自外部模型 API → 优化重心是 async 不阻塞、重活异步化、向量索引；而非微优化。扩展手段（迭代版图）：增 worker、HNSW 调参、读副本、独立向量库。
+**瓶颈认知**：延迟主要来自外部模型 API → 优化重心是 async 不阻塞、重活异步化、向量索引；而非微优化。
+
+### 12.2 大表预判与归档
+
+| 表 | 增长 | 策略 |
+|---|---|---|
+| `traces` | **最快**（每次调用 1+ 行） | 月分区或定期归档；保留期可配（默认 90 天），过期转冷存/删 |
+| `messages` | 较快 | 游标分页；长期按 conversation 归档 |
+| `chunks` | 随语料 | <10 万 HNSW 无感；超量分区/独立向量库（§17） |
+| `usage_daily` | 慢（每日聚合） | 无需特殊处理 |
+
+**铁律**：大表查询必须走索引 + 限定范围（时间/外键）+ 强制 LIMIT，禁全表扫描与无界排序。细则见 [standards §4](./docs/standards.md)。
 
 ## 13. 运维预期（50 人内 / 单人维护）
 
@@ -408,8 +468,8 @@ pgvector 列维度固定，而不同 embedding 模型维度不同（如 1536 / 1
 | 备份 | pg_dump 定时 + 文件卷 | 可免 |
 | 升级 | `git pull` → `compose up --build` → Alembic 迁移 | 同左 |
 | 密钥 | 凭证加密存库 + 部署 `.env` | `.env` 本地 |
-| 监控 | 结构化日志 + 用量统计 + health 探针 | 同左 |
-| 可用性 | 非 HA，单实例 | — |
+| 监控 | 结构化 JSON 日志 + 用量统计 + `/health` 探针；预留 OTel 钩子（D7=A） | 同左 |
+| 可用性 | 非 HA，单实例（D6=A：应用无状态、状态外置，可后续水平扩） | — |
 
 ## 14. 第一阶段 P0 范围（地基）
 
@@ -429,16 +489,66 @@ pgvector 列维度固定，而不同 embedding 模型维度不同（如 1536 / 1
 
 ## 15. 错误处理与测试策略
 
-**错误处理**：core 定义 `AppError` 体系；厂商错误在 `models` 网关捕获归一；异步失败写 `documents.status=failed`+error 可重试；SSE 发 `error` 事件；Pydantic 入口校验；core 中央处理器统一转错误信封(§9.1)。
+**错误处理**：core 定义 `AppError` 体系；厂商错误在 `models` 网关捕获归一；异步失败写 `documents.status=failed`+error 可重试；SSE 发 `error` 事件；Pydantic 入口校验；core 中央处理器统一转 `ApiResponse` 信封(§9.2，始终 HTTP 200 + 错误码)。
 
 **测试**：单元(mock 外部) + 集成(测试 Postgres+pgvector、Celery eager) + 检索/评估(fixture KB)；遵循 TDD；`import-linter` 守依赖分层；前端组件冒烟。
 
 ---
 
-## 已定稿决定（2026-06-26 确认）
+## 16. 外部调用韧性（超时 / 重试 / 熔断 / 隔离）
+
+所有出网调用（`models.invoke/embed`、`tools.call_tool` 的 api/mcp 类、摄取 embedding）必经 **core 统一的外部调用包装**，集中实现韧性策略；各模块不自行裸调 httpx。具体默认值与可重试错误清单见 [standards §7](./docs/standards.md)。
+
+| 维度 | 设计 |
+|---|---|
+| **超时** | 连接 5s；读：非流式 30s / 流式 60s / embedding 30s。**禁止无超时调用**（CLAUDE.md 编码准则强制）。 |
+| **重试** | 仅可重试错误（连接错误/5xx/429/超时）指数退避+抖动，最多 2 次；4xx 鉴权/参数错误不重试。 |
+| **熔断** | 按 **provider 维度**，滑动窗口失败率超阈值→打开，快速失败返回 `19003 CIRCUIT_OPEN`，半开探测恢复。 |
+| **隔离（bulkhead）** | 每 provider 独立 httpx 连接池 + 信号量限并发；异步重活走 Celery 独立队列，单个慢厂商不拖垮全局。 |
+| **可观测** | 每次外部调用经 `observability.trace` 记录 latency/tokens/status/error。 |
+
+```mermaid
+flowchart LR
+    CALLER[runtime / knowledge / worker] --> WRAP[core.external_call 包装]
+    WRAP --> TO[超时] --> RT[重试] --> CB{熔断?}
+    CB -- 打开 --> FAIL[快速失败 50301]
+    CB -- 闭合/半开 --> POOL[provider 连接池+信号量] --> EXT[(外部 API)]
+    WRAP -.记录.-> OBS[observability.trace]
+```
+
+> 实现取舍：v1 用轻量自实现（httpx timeout + tenacity 风格重试 + 简单熔断器 + asyncio.Semaphore），不引入重型韧性框架，符合"不过度抽象/不引栈外重依赖"。
+
+## 17. 可扩展性与演进路径
+
+当前为单机模块化单体；下列扩展点**已在设计中预留接口，无需改业务代码即可演进**（对应评审 D4/D5/D6）：
+
+| 维度 | v1（现在） | 演进路径（按需） | 预留方式 |
+|---|---|---|---|
+| **向量库**（D4=A） | pgvector + HNSW | Qdrant / Milvus 独立向量库 | `knowledge.retrieve()`/写入抽象成接口，存储可替换 |
+| **消息队列**（D5=A） | Celery + Redis | RabbitMQ / Kafka（持久化/广播/有序） | 入队经统一 task 接口封装 |
+| **水平扩展 / HA**（D6=A） | 单实例非 HA | 多副本 app + PG 读副本 | 应用无状态、状态全外置（DB/Redis/文件卷） |
+| **可观测**（D7=A） | JSON 日志 + 用量 + health | Prometheus + OTel 链路追踪（Tempo/Jaeger） | 日志/调用包装预留 OTel 钩子 |
+| **模型/工具** | LiteLLM + Tool 协议 | 新厂商/新工具 | Provider 适配器 + `Tool` 协议（§9.7） |
+| **检索质量** | 向量 Top-K | Rerank / 混合检索 | retrieve 后置可插 rerank（迭代版图） |
+
+**原则**：v1 不预先实现这些（YAGNI），但**抽象边界要留对**——切换成本集中在一个 service 接口内，不外溢到业务/前端。
+
+---
+
+## 已定稿决定
+
+**2026-06-26 确认**
 1. **主键自增 `bigint`**；对外暴露资源用随机 `share_token`，不暴露自增 id。
 2. **embedding 维度默认 1536、全局统一**；换维度 = 迁移+重建索引，v1 不支持多维共存。
 3. **取消 `console` 模块**，路由按模块就近 + `main.py` 装配；跨模块复合编排归 `runtime`。
 4. **跨模块调用 7 条强约束 + `import-linter` 强制**（§6.3）。
 5. **前端接口类型由后端 OpenAPI 经 orval 生成**，不手写（§9）。
 6. **向量索引 HNSW + 余弦**（§11.2）。
+
+**2026-06-27 设计评审确认**
+7. **D1 选择性软删除**：配置表带 `deleted_at`（部分唯一索引），日志表物理/归档（§10、standards §2）。
+8. **D2 混合分页**：大/追加型游标、小列表 offset，`total` 仅首页查询（§9.4、standards §5）。
+9. **D3 统一响应 `ApiResponse[T]`**：始终 HTTP 200 + 整数错误码体系（§9.2/§9.3、standards §6）。
+10. **D4 向量库 pgvector**、**D5 队列 Celery+Redis**、**D6 单实例非 HA（无状态）**、**D7 可观测=日志+用量+health（预留 OTel）**；演进接口见 §17。
+11. **外部调用韧性**：超时/重试/熔断/隔离统一在 core 包装（§16、standards §7）。
+12. **工程细则权威文档** `docs/standards.md`（数据/索引/分页/接口/外部调用 + 核查清单）。
