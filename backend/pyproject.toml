@@ -49,3 +49,15 @@ packages = ["agent_hify"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "agent_hify"
+
+[[tool.importlinter.contracts]]
+name = "core is foundation (no internal deps except stdlib/third-party)"
+type = "forbidden"
+source_modules = ["agent_hify.core"]
+forbidden_modules = [
+    "agent_hify.observability",
+    "agent_hify.worker",
+]
