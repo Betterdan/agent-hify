@@ -49,6 +49,9 @@ packages = ["agent_hify"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: 需要真实数据库/外部依赖的集成测试",
+]
 
 [tool.importlinter]
 root_package = "agent_hify"

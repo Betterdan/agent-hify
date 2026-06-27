@@ -4,10 +4,14 @@ import subprocess
 
 
 def test_import_contracts_hold() -> None:
-    result = subprocess.run(
-        ["uv", "run", "lint-imports"],
-        cwd=".",  # pytest runs from backend/; pyproject.toml is here
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["uv", "run", "lint-imports"],
+            cwd=".",  # pytest runs from backend/; pyproject.toml is here
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError("lint-imports timed out after 120 seconds") from exc
     assert result.returncode == 0, result.stdout + result.stderr
