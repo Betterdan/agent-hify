@@ -31,9 +31,7 @@ def decrypt(token: bytes) -> str:
 
 
 def create_access_token(*, user_id: int, role: str, workspace_id: int) -> str:
-    expire = datetime.now(UTC) + timedelta(
-        minutes=_settings.access_token_expire_minutes
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=_settings.access_token_expire_minutes)
     claims: dict[str, Any] = {
         "sub": str(user_id),
         "role": role,
