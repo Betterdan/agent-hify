@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo agent-hify session start - read CLAUDE.md DESIGN.md METHODOLOGY.md, follow the 10-step methodology, update METHODOLOGY.md when a phase completes or a reusable insight appears",
+            "statusMessage": "Loading agent-hify methodology context"
+          }
+        ]
+      }
+    ]
+  }
+}
