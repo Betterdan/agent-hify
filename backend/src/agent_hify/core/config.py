@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     embedding_dim: int = 1536
 
+    # 32 字节 url-safe base64 密钥（Fernet）；生产用环境变量覆盖
+    encryption_key: str = "YWdlbnQtaGlmeS1kZXYtZmVybmV0LWtleS0zMmJ5dGU="
+    secret_key: str = "dev-secret-change-me"
+    access_token_expire_minutes: int = 1440
+
 
 @lru_cache
 def get_settings() -> Settings:
