@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import datetime
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy import DateTime, create_engine, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from agent_hify.core.config import get_settings
 
@@ -19,3 +20,18 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 def get_session() -> Iterator[Session]:
     with SessionLocal() as session:
         yield session
+
+
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class SoftDeleteMixin:
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
