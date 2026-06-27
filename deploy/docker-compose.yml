@@ -25,5 +25,13 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
 
+  worker:
+    build: ../backend
+    env_file: [.env]
+    command: ["uv", "run", "celery", "-A", "agent_hify.worker.celery_app.celery", "worker", "-l", "info"]
+    depends_on:
+      redis: { condition: service_started }
+      postgres: { condition: service_healthy }
+
 volumes:
   pgdata:
