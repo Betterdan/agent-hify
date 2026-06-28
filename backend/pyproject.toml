@@ -81,20 +81,34 @@ markers = [
 root_package = "agent_hify"
 
 [[tool.importlinter.contracts]]
-name = "core is foundation (no internal deps except stdlib/third-party)"
+name = "core is foundation (no internal deps)"
 type = "forbidden"
 source_modules = ["agent_hify.core"]
 forbidden_modules = [
     "agent_hify.modules",
-    "agent_hify.observability",
     "agent_hify.worker",
 ]
 
 [[tool.importlinter.contracts]]
-name = "identity depends only on core/observability"
+name = "observability service depends only on core"
+type = "forbidden"
+source_modules = ["agent_hify.modules.observability"]
+forbidden_modules = [
+    "agent_hify.modules.identity",
+    "agent_hify.modules.models",
+    "agent_hify.worker",
+]
+ignore_imports = [
+    "agent_hify.modules.observability.router -> agent_hify.modules.identity.deps",
+    "agent_hify.modules.observability.router -> agent_hify.modules.identity.schemas",
+]
+
+[[tool.importlinter.contracts]]
+name = "identity depends only on core"
 type = "forbidden"
 source_modules = ["agent_hify.modules.identity"]
 forbidden_modules = [
-    "agent_hify.modules",
+    "agent_hify.modules.models",
+    "agent_hify.modules.observability",
     "agent_hify.worker",
 ]
