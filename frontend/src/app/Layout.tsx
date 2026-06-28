@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 
 const items = [
   { key: '/models', label: <Link to="/models">模型</Link> },
+  { key: '/apps', label: <Link to="/apps">应用</Link> },
   { key: '/observability', label: <Link to="/observability">用量 / Trace</Link> },
 ];
 

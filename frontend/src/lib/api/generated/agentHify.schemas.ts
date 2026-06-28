@@ -4,6 +4,19 @@
  * agent-hify
  * OpenAPI spec version: 0.1.0
  */
+export type ApiResponseAppOutData = AppOut | null;
+
+export type ApiResponseAppOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseAppOutDetails = ApiResponseAppOutDetailsAnyOf | null;
+
+export interface ApiResponseAppOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseAppOutData;
+  details?: ApiResponseAppOutDetails;
+}
+
 export type ApiResponseConnectivityResultData = ConnectivityResult | null;
 
 export type ApiResponseConnectivityResultDetailsAnyOf = { [key: string]: unknown };
@@ -15,6 +28,32 @@ export interface ApiResponseConnectivityResult {
   message?: string;
   data?: ApiResponseConnectivityResultData;
   details?: ApiResponseConnectivityResultDetails;
+}
+
+export type ApiResponseCursorPageConversationOutData = CursorPageConversationOut | null;
+
+export type ApiResponseCursorPageConversationOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseCursorPageConversationOutDetails = ApiResponseCursorPageConversationOutDetailsAnyOf | null;
+
+export interface ApiResponseCursorPageConversationOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseCursorPageConversationOutData;
+  details?: ApiResponseCursorPageConversationOutDetails;
+}
+
+export type ApiResponseCursorPageMessageOutData = CursorPageMessageOut | null;
+
+export type ApiResponseCursorPageMessageOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseCursorPageMessageOutDetails = ApiResponseCursorPageMessageOutDetailsAnyOf | null;
+
+export interface ApiResponseCursorPageMessageOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseCursorPageMessageOutData;
+  details?: ApiResponseCursorPageMessageOutDetails;
 }
 
 export type ApiResponseInvokeResultData = InvokeResult | null;
@@ -41,6 +80,17 @@ export interface ApiResponseModelOut {
   message?: string;
   data?: ApiResponseModelOutData;
   details?: ApiResponseModelOutDetails;
+}
+
+export type ApiResponseNoneTypeDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseNoneTypeDetails = ApiResponseNoneTypeDetailsAnyOf | null;
+
+export interface ApiResponseNoneType {
+  code?: number;
+  message?: string;
+  data?: null;
+  details?: ApiResponseNoneTypeDetails;
 }
 
 export type ApiResponseProviderOutData = ProviderOut | null;
@@ -82,6 +132,19 @@ export interface ApiResponseUserOut {
   details?: ApiResponseUserOutDetails;
 }
 
+export type ApiResponseListAppOutData = AppOut[] | null;
+
+export type ApiResponseListAppOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseListAppOutDetails = ApiResponseListAppOutDetailsAnyOf | null;
+
+export interface ApiResponseListAppOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseListAppOutData;
+  details?: ApiResponseListAppOutDetails;
+}
+
 export type ApiResponseListModelOutData = ModelOut[] | null;
 
 export type ApiResponseListModelOutDetailsAnyOf = { [key: string]: unknown };
@@ -121,6 +184,61 @@ export interface ApiResponseListUsageDailyOut {
   details?: ApiResponseListUsageDailyOutDetails;
 }
 
+export type AppConfigChatParams = { [key: string]: unknown };
+
+export interface AppConfigChat {
+  model_id: number;
+  system_prompt?: string;
+  params?: AppConfigChatParams;
+  history_limit?: number;
+}
+
+export type AppCreateType = typeof AppCreateType[keyof typeof AppCreateType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const AppCreateType = {
+  chat: 'chat',
+  agent: 'agent',
+} as const;
+
+export interface AppCreate {
+  type?: AppCreateType;
+  name: string;
+  config: AppConfigChat;
+}
+
+export type AppOutConfig = { [key: string]: unknown };
+
+export interface AppOut {
+  id: number;
+  type: string;
+  name: string;
+  config: AppOutConfig;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AppUpdateName = string | null;
+
+export type AppUpdateConfig = AppConfigChat | null;
+
+export type AppUpdateStatus = 'draft' | 'published' | null;
+
+export interface AppUpdate {
+  name?: AppUpdateName;
+  config?: AppUpdateConfig;
+  status?: AppUpdateStatus;
+}
+
+export type ChatInputConversationId = number | null;
+
+export interface ChatInput {
+  conversation_id?: ChatInputConversationId;
+  message: string;
+}
+
 export interface ChatMessage {
   role: string;
   content: string;
@@ -131,6 +249,30 @@ export type ConnectivityResultError = string | null;
 export interface ConnectivityResult {
   ok: boolean;
   error?: ConnectivityResultError;
+}
+
+export interface ConversationOut {
+  id: number;
+  app_id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CursorPageConversationOutNextCursor = string | null;
+
+export interface CursorPageConversationOut {
+  items: ConversationOut[];
+  next_cursor?: CursorPageConversationOutNextCursor;
+  has_more?: boolean;
+}
+
+export type CursorPageMessageOutNextCursor = string | null;
+
+export interface CursorPageMessageOut {
+  items: MessageOut[];
+  next_cursor?: CursorPageMessageOutNextCursor;
+  has_more?: boolean;
 }
 
 export interface HTTPValidationError {
@@ -152,6 +294,16 @@ export interface InvokeResult {
 export interface LoginIn {
   email: string;
   password: string;
+}
+
+export type MessageOutContentItem = { [key: string]: unknown };
+
+export interface MessageOut {
+  id: number;
+  conversation_id: number;
+  role: string;
+  content: MessageOutContentItem[];
+  created_at: string;
 }
 
 export type ModelInType = typeof ModelInType[keyof typeof ModelInType];
@@ -271,6 +423,24 @@ export interface ValidationError {
   input?: unknown;
   ctx?: ValidationErrorCtx;
 }
+
+export type ListConversationsApiV1AppsAppIdConversationsGetParams = {
+cursor?: string | null;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type ListMessagesApiV1ConversationsConvIdMessagesGetParams = {
+cursor?: string | null;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
 
 export type HealthHealthGet200 = {[key: string]: string};
 
