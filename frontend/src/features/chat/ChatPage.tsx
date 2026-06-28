@@ -55,26 +55,29 @@ export function ChatPage() {
     setBubbles((prev) => [...prev, { role: 'user', text }, { role: 'assistant', text: '' }]);
     setStreaming(true);
 
-    await streamChat(
-      appIdNum,
-      { conversation_id: activeConv ?? undefined, message: text },
-      {
-        onDelta: (delta) =>
-          setBubbles((prev) => {
-            const next = [...prev];
-            next[next.length - 1] = {
-              role: 'assistant',
-              text: next[next.length - 1].text + delta,
-            };
-            return next;
-          }),
-        onDone: (d) => {
-          setActiveConv(d.conversation_id);
-          void qc.invalidateQueries({ queryKey: ['conversations', appIdNum] });
+    try {
+      await streamChat(
+        appIdNum,
+        { conversation_id: activeConv ?? undefined, message: text },
+        {
+          onDelta: (delta) =>
+            setBubbles((prev) => {
+              const next = [...prev];
+              next[next.length - 1] = {
+                role: 'assistant',
+                text: next[next.length - 1].text + delta,
+              };
+              return next;
+            }),
+          onDone: (d) => {
+            setActiveConv(d.conversation_id);
+            void qc.invalidateQueries({ queryKey: ['conversations', appIdNum] });
+          },
         },
-      },
-    );
-    setStreaming(false);
+      );
+    } finally {
+      setStreaming(false);
+    }
   };
 
   return (
