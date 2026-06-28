@@ -1,0 +1,24 @@
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+
+import { Layout } from '@/app/Layout';
+import { RequireAuth } from '@/features/auth/RequireAuth';
+import { LoginPage } from '@/features/auth/LoginPage';
+import { ModelsPage } from '@/features/models/ModelsPage';
+import { ObservabilityPage } from '@/features/observability/ObservabilityPage';
+
+export const router = createBrowserRouter([
+  { path: '/login', element: <LoginPage /> },
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <Layout />,
+        children: [
+          { path: '/', element: <Navigate to="/models" replace /> },
+          { path: '/models', element: <ModelsPage /> },
+          { path: '/observability', element: <ObservabilityPage /> },
+        ],
+      },
+    ],
+  },
+]);
