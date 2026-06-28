@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -150,6 +151,19 @@ async def invoke(
 async def embed(session: Session, *, model_id: int, texts: list[str]) -> list[list[float]]:
     ref = resolve_ref(session, model_id)
     return await adapter.embed(ref, texts)
+
+
+async def invoke_stream(
+    session: Session,
+    *,
+    model_id: int,
+    messages: list[dict[str, str]],
+    usage_sink: dict[str, object] | None = None,
+) -> AsyncGenerator[str, None]:
+    """流式调用：解析 ref 后委托 adapter.invoke_stream，逐段透传文本增量。"""
+    ref = resolve_ref(session, model_id)
+    async for delta in adapter.invoke_stream(ref, messages, usage_sink):
+        yield delta
 
 
 async def test_connectivity(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import litellm
 from litellm.exceptions import (
@@ -84,3 +86,57 @@ async def embed(ref: ModelRef, texts: list[str]) -> list[list[float]]:
     return await call_with_resilience(
         f"{ref.provider_id}:embed", _call, timeout=_TIMEOUT, retryable=_RETRYABLE
     )
+
+
+_STREAM_CONNECT_TIMEOUT = 60.0
+
+
+async def invoke_stream(
+    ref: ModelRef,
+    messages: list[dict[str, str]],
+    usage_sink: dict[str, object] | None = None,
+) -> AsyncGenerator[str, None]:
+    """流式调用模型，逐段 yield 文本增量。
+
+    用量经 `usage_sink`（可变 out 参数）回传：流结束后写入
+    {"tokens_in","tokens_out","cost"}；provider 不支持 usage 时回退 0。
+    """
+
+    async def _open() -> Any:
+        return await litellm.acompletion(
+            model=ref.model_key,
+            messages=messages,
+            api_key=ref.api_key,
+            api_base=ref.base_url,
+            stream=True,
+            stream_options={"include_usage": True},
+            **ref.default_params,
+        )
+
+    stream = await asyncio.wait_for(_open(), timeout=_STREAM_CONNECT_TIMEOUT)
+
+    final_chunk: object = None
+    async for chunk in stream:
+        final_chunk = chunk
+        try:
+            delta = chunk.choices[0].delta.content
+        except (IndexError, AttributeError):
+            delta = None
+        if delta:
+            yield delta
+
+    if usage_sink is not None:
+        tokens_in = 0
+        tokens_out = 0
+        cost = 0.0
+        usage = getattr(final_chunk, "usage", None)
+        if usage is not None:
+            tokens_in = int(getattr(usage, "prompt_tokens", 0) or 0)
+            tokens_out = int(getattr(usage, "completion_tokens", 0) or 0)
+        try:
+            cost = float(litellm.completion_cost(completion_response=final_chunk))
+        except Exception:
+            cost = 0.0
+        usage_sink["tokens_in"] = tokens_in
+        usage_sink["tokens_out"] = tokens_out
+        usage_sink["cost"] = cost
