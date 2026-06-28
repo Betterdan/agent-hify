@@ -8,6 +8,7 @@ import {
   type ModelOut,
   testConnectivity,
 } from '@/features/models/api';
+import { ApiError } from '@/lib/api/http';
 
 export function ModelsPage() {
   const qc = useQueryClient();
@@ -16,6 +17,7 @@ export function ModelsPage() {
   const connect = useMutation({
     mutationFn: testConnectivity,
     onSuccess: (r) => (r.ok ? message.success('连通正常') : message.error(r.error ?? '失败')),
+    onError: (e) => message.error(e instanceof ApiError ? e.message : '连通测试失败'),
   });
 
   const create = useMutation({
@@ -36,6 +38,7 @@ export function ModelsPage() {
       message.success('已创建');
       void qc.invalidateQueries({ queryKey: ['models'] });
     },
+    onError: (e) => message.error(e instanceof ApiError ? e.message : '创建失败'),
   });
 
   const columns = [
