@@ -9,5 +9,5 @@ beforeEach(() => clearToken());
 test('redirects to login when unauthenticated', async () => {
   window.history.pushState({}, '', '/models');
   render(<App />);
-  expect(await screen.findByText('login')).toBeInTheDocument();
+  expect(await screen.findByLabelText('邮箱')).toBeInTheDocument();
 });
