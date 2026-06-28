@@ -31,3 +31,9 @@ class ErrorCode(IntEnum):
     MODEL_NOT_FOUND = 33001
     EMBEDDING_DIM_MISMATCH = 34001
     MODEL_AUTH_FAILED = 39001
+
+    # 6 apps
+    APP_NOT_FOUND = 60003
+
+    # 7 runtime
+    CONVERSATION_NOT_FOUND = 70001

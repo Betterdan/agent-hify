@@ -126,3 +126,15 @@ forbidden_modules = [
     "agent_hify.modules.runtime",
     "agent_hify.worker",
 ]
+
+[[tool.importlinter.contracts]]
+name = "apps does not depend on upper layers"
+type = "forbidden"
+source_modules = ["agent_hify.modules.apps"]
+forbidden_modules = [
+    "agent_hify.modules.models",
+    "agent_hify.modules.runtime",
+    "agent_hify.modules.knowledge",
+    "agent_hify.modules.tools",
+    "agent_hify.worker",
+]
