@@ -120,7 +120,7 @@
 | ⑤ 归档 | DESIGN（决策部分）+ 本文件 |
 | ⑥ 架构 | DESIGN §5–§10 + CLAUDE.md（行为指令） |
 | ⑦ 工程搭建 | ✅ P0-1（后端骨架：Docker/Alembic+pgvector/Celery/import-linter，一键起） |
-| ⑧ 功能实现 | 进行中：✅ P0-2（core 横切 + identity 登录鉴权）；P0-3（models+observability）待办（见 DESIGN §12） |
+| ⑧ 功能实现 | 进行中：✅ P0-2（core 横切 + identity 登录鉴权）；✅ P0-3（models 模型网关 + observability 基线 + 外部调用韧性）；P0-4（前端控制台）待办（见 DESIGN §12、`docs/superpowers/STATUS.md`） |
 | ⑨⑩ 测试/部署 | 待办；实现期已建测试分层（unit / `@pytest.mark.integration`）与全分支总评审纪律（见 §2bis） |
 
 ---
