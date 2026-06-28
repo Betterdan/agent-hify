@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -36,7 +38,5 @@ def update_app(session: Session, app: App) -> App:
 
 
 def soft_delete_app(session: Session, app: App) -> None:
-    from datetime import UTC, datetime
-
     app.deleted_at = datetime.now(UTC)
     session.flush()
