@@ -35,7 +35,7 @@ def list_messages(
     current: UserOut = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> ApiResponse[CursorPage[MessageOut]]:
-    page = service.list_messages(session, conv_id, cursor, limit)
+    page = service.list_messages(session, conv_id, current.workspace_id, cursor, limit)
     return ApiResponse.ok(page)
 
 

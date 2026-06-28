@@ -61,9 +61,13 @@ def list_conversations(
 def list_messages(
     session: Session,
     conversation_id: int,
+    workspace_id: int,
     cursor: str | None,
     limit: int,
 ) -> CursorPage[MessageOut]:
+    conv = repository.get_conversation(session, conversation_id, workspace_id)
+    if conv is None:
+        raise NotFoundError(ErrorCode.CONVERSATION_NOT_FOUND, "对话不存在")
     decoded = decode_cursor(cursor) if cursor else None
     rows = repository.list_messages(session, conversation_id, decoded, limit + 1)
     has_more = len(rows) > limit
