@@ -73,6 +73,13 @@ export function ChatPage() {
             setActiveConv(d.conversation_id);
             void qc.invalidateQueries({ queryKey: ['conversations', appIdNum] });
           },
+          onError: (_e) => {
+            setBubbles((prev) => {
+              const next = [...prev];
+              next[next.length - 1] = { role: 'assistant', text: '（请求失败，请重试）' };
+              return next;
+            });
+          },
         },
       );
     } finally {

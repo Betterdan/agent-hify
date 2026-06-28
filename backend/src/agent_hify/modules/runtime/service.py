@@ -125,6 +125,7 @@ async def run_chat(
         for m in history:
             llm_messages.append({"role": m.role, "content": _text_of(m.content)})
 
+        extra_params: dict[str, object] = dict(config.params)
         usage_sink: dict[str, object] = {}
         parts: list[str] = []
         started = time.monotonic()
@@ -133,6 +134,7 @@ async def run_chat(
             model_id=config.model_id,
             messages=llm_messages,
             usage_sink=usage_sink,
+            extra_params=extra_params,
         ):
             parts.append(delta)
             yield _sse("message", {"delta": delta})

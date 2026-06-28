@@ -159,10 +159,11 @@ async def invoke_stream(
     model_id: int,
     messages: list[dict[str, str]],
     usage_sink: dict[str, object] | None = None,
+    extra_params: dict[str, object] | None = None,
 ) -> AsyncGenerator[str, None]:
     """流式调用：解析 ref 后委托 adapter.invoke_stream，逐段透传文本增量。"""
     ref = resolve_ref(session, model_id)
-    async for delta in adapter.invoke_stream(ref, messages, usage_sink):
+    async for delta in adapter.invoke_stream(ref, messages, usage_sink, extra_params):
         yield delta
 
 

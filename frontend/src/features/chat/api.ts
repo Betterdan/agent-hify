@@ -52,6 +52,10 @@ export async function streamChat(
     },
     body: JSON.stringify(body),
   });
+  if (!resp.ok) {
+    handlers.onError?.({ code: resp.status, message: `请求失败 (${resp.status})` });
+    return;
+  }
   if (!resp.body) return;
 
   const reader = resp.body.getReader();

@@ -89,20 +89,24 @@ async def embed(ref: ModelRef, texts: list[str]) -> list[list[float]]:
 
 
 _STREAM_CONNECT_TIMEOUT = 60.0
+_CHUNK_TIMEOUT = 120.0  # max seconds between chunks before giving up
 
 
 async def invoke_stream(
     ref: ModelRef,
     messages: list[dict[str, str]],
     usage_sink: dict[str, object] | None = None,
+    extra_params: dict[str, object] | None = None,
 ) -> AsyncGenerator[str, None]:
     """流式调用模型，逐段 yield 文本增量。
 
     用量经 `usage_sink`（可变 out 参数）回传：流结束后写入
     {"tokens_in","tokens_out","cost"}；provider 不支持 usage 时回退 0。
+    `extra_params` 覆盖 model default_params（如 app config 的 temperature/max_tokens）。
     """
 
     async def _open() -> Any:
+        merged = {**ref.default_params, **(extra_params or {})}
         return await litellm.acompletion(
             model=ref.model_key,
             messages=messages,
@@ -110,13 +114,18 @@ async def invoke_stream(
             api_base=ref.base_url,
             stream=True,
             stream_options={"include_usage": True},
-            **ref.default_params,
+            **merged,
         )
 
     stream = await asyncio.wait_for(_open(), timeout=_STREAM_CONNECT_TIMEOUT)
 
     final_chunk: object = None
-    async for chunk in stream:
+    aiter = stream.__aiter__()
+    while True:
+        try:
+            chunk = await asyncio.wait_for(aiter.__anext__(), timeout=_CHUNK_TIMEOUT)
+        except StopAsyncIteration:
+            break
         final_chunk = chunk
         try:
             delta = chunk.choices[0].delta.content
