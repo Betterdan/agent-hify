@@ -33,6 +33,7 @@
     "jsdom": "^25.0.1",
     "@testing-library/react": "^16.1.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "orval": "^7.3.0"
+    "orval": "^7.3.0",
+    "axios-mock-adapter": "^2.1.0"
   }
 }
