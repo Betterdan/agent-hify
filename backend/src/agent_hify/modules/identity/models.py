@@ -23,6 +23,4 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     )
     email: Mapped[str] = mapped_column(CITEXT, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(
-        String, nullable=False, server_default=text("'member'")
-    )
+    role: Mapped[str] = mapped_column(String, nullable=False, server_default=text("'member'"))

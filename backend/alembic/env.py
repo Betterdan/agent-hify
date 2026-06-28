@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from agent_hify.core.config import get_settings
 from agent_hify.core.db import Base
-from alembic import context
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_settings().database_url)

@@ -16,6 +16,7 @@ dependencies = [
     "bcrypt>=4.2",
     "cryptography>=44.0",
     "pyjwt>=2.10",
+    "email-validator>=2.2",
 ]
 
 [dependency-groups]
@@ -42,6 +43,21 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI 依赖注入惯用法：Depends/Header/Query 等作为参数默认值是框架推荐写法，
+# 不应被 B008（函数调用作默认值）拦截。
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Header",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Cookie",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Security",
+]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -64,6 +80,16 @@ name = "core is foundation (no internal deps except stdlib/third-party)"
 type = "forbidden"
 source_modules = ["agent_hify.core"]
 forbidden_modules = [
+    "agent_hify.modules",
     "agent_hify.observability",
+    "agent_hify.worker",
+]
+
+[[tool.importlinter.contracts]]
+name = "identity depends only on core/observability"
+type = "forbidden"
+source_modules = ["agent_hify.modules.identity"]
+forbidden_modules = [
+    "agent_hify.modules",
     "agent_hify.worker",
 ]
