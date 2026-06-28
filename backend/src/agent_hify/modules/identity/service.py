@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
-from fastapi import Depends, Header
 from sqlalchemy.orm import Session
 
-from agent_hify.core.db import get_session
 from agent_hify.core.error_codes import ErrorCode
-from agent_hify.core.exceptions import PermissionError, UnauthorizedError
+from agent_hify.core.exceptions import UnauthorizedError
 from agent_hify.core.security import (
     create_access_token,
     decode_access_token,
@@ -25,27 +21,14 @@ def authenticate(session: Session, email: str, password: str) -> TokenOut:
     return TokenOut(access_token=token)
 
 
-def get_current_user(
-    authorization: str = Header(default=""),
-    session: Session = Depends(get_session),
-) -> UserOut:
-    if not authorization.lower().startswith("bearer "):
-        raise UnauthorizedError(ErrorCode.UNAUTHORIZED, "缺少 Bearer 令牌")
-    token = authorization.split(" ", 1)[1]
+def resolve_user(session: Session, token: str) -> UserOut:
+    """从令牌解析当前用户（纯函数、框架无关；Web 层 DI 见 deps.py）。"""
     try:
         claims = decode_access_token(token)
-    except Exception as exc:  # jwt 异常归一
+        user_id = int(str(claims["sub"]))
+    except Exception as exc:  # jwt 异常 / 缺 sub / sub 非数字 一律归一为未授权(401 而非 500)
         raise UnauthorizedError(ErrorCode.UNAUTHORIZED, "令牌无效或过期") from exc
-    user = repository.get_user_by_id(session, int(str(claims["sub"])))
+    user = repository.get_user_by_id(session, user_id)
     if user is None:
         raise UnauthorizedError(ErrorCode.UNAUTHORIZED, "用户不存在")
     return UserOut(id=user.id, email=user.email, role=user.role, workspace_id=user.workspace_id)
-
-
-def require_role(role: str) -> Callable[[UserOut], UserOut]:
-    def _dep(current: UserOut = Depends(get_current_user)) -> UserOut:
-        if current.role != role:
-            raise PermissionError(ErrorCode.PERMISSION_DENIED, "权限不足")
-        return current
-
-    return _dep
