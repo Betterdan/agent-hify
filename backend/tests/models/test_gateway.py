@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 import pytest
 
 from agent_hify.core.db import SessionLocal
@@ -23,12 +25,16 @@ async def test_invoke_records_trace_and_usage(monkeypatch: pytest.MonkeyPatch) -
 
     monkeypatch.setattr(service.adapter, "invoke", fake_invoke)
 
+    unique = uuid.uuid4().hex[:8]
     with SessionLocal() as s:
         prov = service.create_provider(
             s,
             1,
             ProviderIn(
-                type="openai", name="p-gw", base_url=None, credentials={"api_key": "sk-x"}
+                type="openai",
+                name=f"p-gw-{unique}",
+                base_url=None,
+                credentials={"api_key": "sk-x"},
             ),
         )
         m = service.create_model(

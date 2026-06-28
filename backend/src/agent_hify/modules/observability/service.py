@@ -59,15 +59,12 @@ def record_usage(
 
 def list_traces(session: Session, workspace_id: int, limit: int = 50) -> list[TraceOut]:
     return [
-        TraceOut.model_validate(t)
-        for t in repository.select_traces(session, workspace_id, limit)
+        TraceOut.model_validate(t) for t in repository.select_traces(session, workspace_id, limit)
     ]
 
 
 def list_usage(session: Session, workspace_id: int) -> list[UsageDailyOut]:
-    return [
-        UsageDailyOut.model_validate(u) for u in repository.select_usage(session, workspace_id)
-    ]
+    return [UsageDailyOut.model_validate(u) for u in repository.select_usage(session, workspace_id)]
 
 
 def run_eval_hook(name: str, payload: dict[str, object]) -> None:

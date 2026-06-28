@@ -31,7 +31,5 @@ def get_model(session: Session, model_id: int) -> Model | None:
 
 
 def list_models(session: Session, workspace_id: int) -> list[Model]:
-    stmt = select(Model).where(
-        Model.workspace_id == workspace_id, Model.deleted_at.is_(None)
-    )
+    stmt = select(Model).where(Model.workspace_id == workspace_id, Model.deleted_at.is_(None))
     return list(session.execute(stmt).scalars().all())

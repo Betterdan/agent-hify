@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -26,11 +28,16 @@ def test_configure_model_and_invoke_records(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(service.adapter, "invoke", fake_invoke)
     client = TestClient(create_app())
     h = {"Authorization": f"Bearer {_token(client)}"}
+    unique = uuid.uuid4().hex[:8]
 
     prov = client.post(
         "/api/v1/model-providers",
         headers=h,
-        json={"type": "openai", "name": "api-prov", "credentials": {"api_key": "sk-x"}},
+        json={
+            "type": "openai",
+            "name": f"api-prov-{unique}",
+            "credentials": {"api_key": "sk-x"},
+        },
     )
     assert prov.json()["code"] == 0
     pid = prov.json()["data"]["id"]
