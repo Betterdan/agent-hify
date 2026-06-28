@@ -12,8 +12,12 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     from agent_hify.modules.identity.router import router as identity_router
+    from agent_hify.modules.models.router import router as models_router
+    from agent_hify.modules.observability.router import router as observability_router
 
     app.include_router(identity_router)
+    app.include_router(models_router)
+    app.include_router(observability_router)
 
     @app.get("/health")
     def health() -> dict[str, str]:
