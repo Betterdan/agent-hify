@@ -64,3 +64,76 @@ async def test_invoke_records_trace_and_usage(monkeypatch: pytest.MonkeyPatch) -
         assert after == before + 1
         usage = [u for u in obs_service.list_usage(s, 1) if u.model_id == m.id]
         assert usage and usage[0].tokens_in >= 3
+
+
+def _seed_model(unique: str) -> int:
+    with SessionLocal() as s:
+        prov = service.create_provider(
+            s,
+            1,
+            ProviderIn(
+                type="openai", name=f"p-{unique}", base_url=None, credentials={"api_key": "sk-x"}
+            ),
+        )
+        m = service.create_model(
+            s,
+            1,
+            ModelIn(
+                provider_id=prov.id,
+                model_key="gpt-4o-mini",
+                type="llm",
+                capabilities=[],
+                embedding_dim=None,
+                default_params={},
+            ),
+        )
+        s.commit()
+        return int(m.id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_invoke_failure_records_error_trace(monkeypatch: pytest.MonkeyPatch) -> None:
+    # I3 回归：调用失败也要留痕(status="error")，且即便业务事务回滚仍须可见。
+    async def boom(ref: object, messages: object) -> InvokeResult:
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr(service.adapter, "invoke", boom)
+    mid = _seed_model(uuid.uuid4().hex[:8])
+
+    with SessionLocal() as s:
+        with pytest.raises(RuntimeError):
+            await service.invoke(
+                s, model_id=mid, workspace_id=1, messages=[ChatMessage(role="user", content="ping")]
+            )
+        # 业务会话回滚：失败调用不应留下成功业务数据，但错误 trace 须独立留痕
+        s.rollback()
+
+    with SessionLocal() as s:
+        errs = [t for t in obs_service.list_traces(s, 1, limit=1000) if t.status == "error"]
+        assert errs, "失败调用应记录一条 status=error 的 trace"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_connectivity_does_not_pollute_usage(monkeypatch: pytest.MonkeyPatch) -> None:
+    # I4 回归：连通性探测不得累加 usage_daily 计费。
+    async def fake_invoke(ref: object, messages: object) -> InvokeResult:
+        return InvokeResult(
+            content="pong", tokens_in=7, tokens_out=2, cost=0.01, finish_reason="stop"
+        )
+
+    monkeypatch.setattr(service.adapter, "invoke", fake_invoke)
+    mid = _seed_model(uuid.uuid4().hex[:8])
+
+    with SessionLocal() as s:
+        before = sum(u.tokens_in for u in obs_service.list_usage(s, 1) if u.model_id == mid)
+
+    with SessionLocal() as s:
+        res = await service.test_connectivity(s, model_id=mid, workspace_id=1)
+        s.commit()
+        assert res.ok is True
+
+    with SessionLocal() as s:
+        after = sum(u.tokens_in for u in obs_service.list_usage(s, 1) if u.model_id == mid)
+    assert after == before, "连通性探测不应写入 usage 计费"

@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+
 import litellm
+from litellm.exceptions import (
+    APIConnectionError,
+    InternalServerError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
+)
 from pydantic import BaseModel, Field
 
 from agent_hify.core.external import call_with_resilience
@@ -8,8 +17,23 @@ from agent_hify.modules.models.schemas import InvokeResult
 
 _TIMEOUT = 30.0
 
+# litellm 的瞬时异常**不**继承内置 ConnectionError/TimeoutError，须显式列出才会被韧性层重试。
+# 鉴权/参数类(AuthenticationError/BadRequestError 等)故意不在此列：它们是客户端错误，
+# 重试无益且不应计入熔断。
+_RETRYABLE: tuple[type[BaseException], ...] = (
+    Timeout,
+    APIConnectionError,
+    RateLimitError,
+    ServiceUnavailableError,
+    InternalServerError,
+    ConnectionError,
+    TimeoutError,
+    asyncio.TimeoutError,
+)
+
 
 class ModelRef(BaseModel):
+    provider_id: int
     provider_type: str
     model_key: str
     api_key: str | None = None
@@ -40,7 +64,11 @@ async def invoke(ref: ModelRef, messages: list[dict[str, str]]) -> InvokeResult:
             finish_reason=str(choice.finish_reason or "stop"),
         )
 
-    return await call_with_resilience(ref.provider_type, _call, timeout=_TIMEOUT)
+    # 熔断/舱壁 key 细化到 provider 实例 + 操作：避免某个配置错误的 provider 连累
+    # 同类型其它 provider/workspace，且让 completion 与 embedding 互不抢占并发名额。
+    return await call_with_resilience(
+        f"{ref.provider_id}:invoke", _call, timeout=_TIMEOUT, retryable=_RETRYABLE
+    )
 
 
 async def embed(ref: ModelRef, texts: list[str]) -> list[list[float]]:
@@ -53,4 +81,6 @@ async def embed(ref: ModelRef, texts: list[str]) -> list[list[float]]:
         )
         return [list(item["embedding"]) for item in resp.data]
 
-    return await call_with_resilience(ref.provider_type, _call, timeout=_TIMEOUT)
+    return await call_with_resilience(
+        f"{ref.provider_id}:embed", _call, timeout=_TIMEOUT, retryable=_RETRYABLE
+    )

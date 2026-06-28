@@ -38,10 +38,12 @@ def upgrade() -> None:
             name="ck_traces_type",
         ),
     )
+    # 列序匹配查询 select_traces: WHERE workspace_id=? ORDER BY created_at DESC, id DESC。
+    # app_id 不作过滤条件，不放进复合索引前缀，否则无法支撑该排序。
     op.create_index(
-        "ix_traces_ws_app_created",
+        "ix_traces_ws_created",
         "traces",
-        ["workspace_id", "app_id", sa.text("created_at DESC")],
+        ["workspace_id", sa.text("created_at DESC"), sa.text("id DESC")],
     )
 
     op.create_table(

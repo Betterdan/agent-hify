@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
+
+ProviderType = Literal["openai", "anthropic", "ollama", "openai_compatible"]
+ModelType = Literal["llm", "embedding", "rerank"]
 
 
 class ProviderIn(BaseModel):
-    type: str
+    type: ProviderType
     name: str
     base_url: str | None = None
     credentials: dict[str, str] = Field(default_factory=dict)
@@ -23,7 +28,7 @@ class ProviderOut(BaseModel):
 class ModelIn(BaseModel):
     provider_id: int
     model_key: str
-    type: str
+    type: ModelType
     capabilities: list[str] = Field(default_factory=list)
     embedding_dim: int | None = None
     default_params: dict[str, object] = Field(default_factory=dict)

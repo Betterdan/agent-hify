@@ -61,3 +61,17 @@ def test_configure_model_and_invoke_records(monkeypatch: pytest.MonkeyPatch) -> 
 
     traces = client.get("/api/v1/observability/traces", headers=h)
     assert len(traces.json()["data"]) >= 1
+
+
+@pytest.mark.integration
+def test_create_provider_invalid_type_returns_param_invalid() -> None:
+    # #10 回归：非法 type 应在 Pydantic 层即拒为 PARAM_INVALID(10001)，而非落到 DB 约束→500。
+    client = TestClient(create_app())
+    h = {"Authorization": f"Bearer {_token(client)}"}
+    resp = client.post(
+        "/api/v1/model-providers",
+        headers=h,
+        json={"type": "not-a-real-type", "name": "x", "credentials": {}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["code"] == 10001

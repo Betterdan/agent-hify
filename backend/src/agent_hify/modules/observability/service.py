@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from agent_hify.core.db import SessionLocal
 from agent_hify.core.logging import get_logger
 from agent_hify.modules.observability import repository
 from agent_hify.modules.observability.models import Trace
@@ -30,6 +31,18 @@ def record_trace(session: Session, data: TraceIn) -> int:
         error=data.error,
     )
     return repository.insert_trace(session, trace)
+
+
+def record_trace_committed(data: TraceIn) -> int:
+    """在独立会话中写入并提交一条 trace。
+
+    用于即便业务事务回滚也须留痕的场景（如失败的外部调用）：失败请求的会话会被
+    回滚，错误 trace 若写在同一会话里会一并丢失，故另开会话单独提交。
+    """
+    with SessionLocal() as s:
+        tid = record_trace(s, data)
+        s.commit()
+        return tid
 
 
 def record_usage(

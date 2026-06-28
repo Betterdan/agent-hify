@@ -42,7 +42,7 @@ def create_provider(session: Session, workspace_id: int, dto: ProviderIn) -> Pro
 def get_decrypted_credentials(session: Session, provider_id: int) -> dict[str, str]:
     provider = repository.get_provider(session, provider_id)
     if provider is None:
-        raise NotFoundError(ErrorCode.INTERNAL_ERROR, "厂商不存在")
+        raise NotFoundError(ErrorCode.MODEL_NOT_FOUND, "厂商不存在")
     if not provider.credentials_encrypted:
         return {}
     raw: dict[str, str] = json.loads(decrypt(provider.credentials_encrypted))
@@ -76,6 +76,7 @@ def resolve_ref(session: Session, model_id: int) -> ModelRef:
         raise NotFoundError(ErrorCode.MODEL_NOT_FOUND, "模型厂商不存在")
     creds = get_decrypted_credentials(session, provider.id)
     return ModelRef(
+        provider_id=provider.id,
         provider_type=provider.type,
         model_key=model.model_key,
         api_key=creds.get("api_key"),
@@ -85,37 +86,64 @@ def resolve_ref(session: Session, model_id: int) -> ModelRef:
 
 
 async def invoke(
-    session: Session, *, model_id: int, workspace_id: int, messages: list[ChatMessage]
+    session: Session,
+    *,
+    model_id: int,
+    workspace_id: int,
+    messages: list[ChatMessage],
+    record: bool = True,
 ) -> InvokeResult:
+    """调用模型并记账。
+
+    `record=True`（默认）下成功记 trace(ok)+usage、失败记 trace(error)；成功的 trace/usage
+    随请求事务由 router 提交，失败的 error trace 走独立会话提交（请求事务会回滚故须留痕另存）。
+    `record=False` 用于连通性探测等不应计入可观测/计费的内部调用。
+    """
     ref = resolve_ref(session, model_id)
     payload = [{"role": m.role, "content": m.content} for m in messages]
     started = time.monotonic()
-    result = await adapter.invoke(ref, payload)
+    try:
+        result = await adapter.invoke(ref, payload)
+    except Exception as exc:
+        if record:
+            latency_ms = int((time.monotonic() - started) * 1000)
+            obs_service.record_trace_committed(
+                TraceIn(
+                    workspace_id=workspace_id,
+                    type="llm_call",
+                    status="error",
+                    latency_ms=latency_ms,
+                    input={"messages": payload},
+                    error=str(exc),
+                )
+            )
+        raise
     latency_ms = int((time.monotonic() - started) * 1000)
 
-    obs_service.record_trace(
-        session,
-        TraceIn(
+    if record:
+        obs_service.record_trace(
+            session,
+            TraceIn(
+                workspace_id=workspace_id,
+                type="llm_call",
+                status="ok",
+                tokens_in=result.tokens_in,
+                tokens_out=result.tokens_out,
+                cost=Decimal(str(result.cost)),
+                latency_ms=latency_ms,
+                input={"messages": payload},
+                output={"content": result.content},
+            ),
+        )
+        obs_service.record_usage(
+            session,
             workspace_id=workspace_id,
-            type="llm_call",
-            status="ok",
+            day=datetime.now(UTC).date(),
+            model_id=model_id,
             tokens_in=result.tokens_in,
             tokens_out=result.tokens_out,
             cost=Decimal(str(result.cost)),
-            latency_ms=latency_ms,
-            input={"messages": payload},
-            output={"content": result.content},
-        ),
-    )
-    obs_service.record_usage(
-        session,
-        workspace_id=workspace_id,
-        day=datetime.now(UTC).date(),
-        model_id=model_id,
-        tokens_in=result.tokens_in,
-        tokens_out=result.tokens_out,
-        cost=Decimal(str(result.cost)),
-    )
+        )
     return result
 
 
@@ -128,11 +156,13 @@ async def test_connectivity(
     session: Session, *, model_id: int, workspace_id: int
 ) -> ConnectivityResult:
     try:
+        # record=False：连通性探测不计入 trace/usage，避免污染可观测与计费。
         await invoke(
             session,
             model_id=model_id,
             workspace_id=workspace_id,
             messages=[ChatMessage(role="user", content="ping")],
+            record=False,
         )
         return ConnectivityResult(ok=True)
     except Exception as exc:  # 归一为连通性失败

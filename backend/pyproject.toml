@@ -112,3 +112,17 @@ forbidden_modules = [
     "agent_hify.modules.observability",
     "agent_hify.worker",
 ]
+
+# models(L2) 只能向下依赖 core/identity/observability；禁止依赖更上层能力/编排模块。
+# 这些上层模块尚未落地，列入是为未来防回归(import-linter 容忍 forbidden 指向不存在模块)。
+[[tool.importlinter.contracts]]
+name = "models does not depend on upper layers"
+type = "forbidden"
+source_modules = ["agent_hify.modules.models"]
+forbidden_modules = [
+    "agent_hify.modules.knowledge",
+    "agent_hify.modules.tools",
+    "agent_hify.modules.apps",
+    "agent_hify.modules.runtime",
+    "agent_hify.worker",
+]
