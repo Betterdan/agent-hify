@@ -18,6 +18,9 @@ dependencies = [
     "pyjwt>=2.10",
     "email-validator>=2.2",
     "litellm>=1.55",
+    "llama-index-core>=0.12",
+    "pypdf>=5.0",
+    "python-multipart>=0.0.20",
 ]
 
 [dependency-groups]
@@ -148,5 +151,17 @@ source_modules = ["agent_hify.modules.runtime"]
 forbidden_modules = [
     "agent_hify.modules.knowledge",
     "agent_hify.modules.tools",
+    "agent_hify.worker",
+]
+
+# knowledge(L2') 禁止依赖 runtime/tools/apps（只能依赖 core/identity/observability/models）
+[[tool.importlinter.contracts]]
+name = "knowledge does not depend on upper layers"
+type = "forbidden"
+source_modules = ["agent_hify.modules.knowledge"]
+forbidden_modules = [
+    "agent_hify.modules.runtime",
+    "agent_hify.modules.tools",
+    "agent_hify.modules.apps",
     "agent_hify.worker",
 ]

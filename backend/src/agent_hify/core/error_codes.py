@@ -32,6 +32,11 @@ class ErrorCode(IntEnum):
     EMBEDDING_DIM_MISMATCH = 34001
     MODEL_AUTH_FAILED = 39001
 
+    # 4 knowledge
+    KB_NOT_FOUND = 43001
+    DOC_NOT_FOUND = 43002
+    DOC_INGEST_FAILED = 44001
+
     # 6 apps
     APP_NOT_FOUND = 60003
 

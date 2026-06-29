@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://hify:hify@localhost:5432/hify"
     redis_url: str = "redis://localhost:6379/0"
     embedding_dim: int = 1536
+    upload_dir: str = "/tmp/agent_hify_uploads"
 
     # 32 字节 url-safe base64 密钥（Fernet）；生产用环境变量覆盖
     encryption_key: str = "YWdlbnQtaGlmeS1kZXYtZmVybmV0LWtleS0zMmJ5dGU="
