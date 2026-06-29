@@ -17,6 +17,7 @@ def create_app() -> FastAPI:
     from agent_hify.modules.models.router import router as models_router
     from agent_hify.modules.observability.router import router as observability_router
     from agent_hify.modules.runtime.router import router as runtime_router
+    from agent_hify.modules.tools.router import router as tools_router
 
     app.include_router(apps_router)
     app.include_router(identity_router)
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
     app.include_router(models_router)
     app.include_router(observability_router)
     app.include_router(runtime_router)
+    app.include_router(tools_router, prefix="/api/v1")
 
     @app.get("/health")
     def health() -> dict[str, str]:
