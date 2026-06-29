@@ -11,6 +11,7 @@ import {
   Select,
   Slider,
   Space,
+  Tag,
   message,
 } from 'antd';
 import { useState } from 'react';
@@ -72,8 +73,11 @@ export function AppsPage() {
             <Card
               title={app.name}
               actions={[
-                <Link key="chat" to={`/apps/${app.id}/chat`}>
-                  进入对话
+                <Link
+                  key="open"
+                  to={app.type === 'agent' ? `/apps/${app.id}/run` : `/apps/${app.id}/chat`}
+                >
+                  {app.type === 'agent' ? '运行 Agent' : '进入对话'}
                 </Link>,
                 <Popconfirm
                   key="del"
@@ -84,7 +88,10 @@ export function AppsPage() {
                 </Popconfirm>,
               ]}
             >
-              <div>类型：{app.type}</div>
+              <div>
+                类型：
+                <Tag color={app.type === 'agent' ? 'purple' : 'blue'}>{app.type}</Tag>
+              </div>
               <div>状态：{app.status}</div>
             </Card>
           </Col>

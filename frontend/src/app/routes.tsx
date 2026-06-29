@@ -7,6 +7,7 @@ import { ModelsPage } from '@/features/models/ModelsPage';
 import { ObservabilityPage } from '@/features/observability/ObservabilityPage';
 import { AppsPage } from '@/features/apps/AppsPage';
 import { ChatPage } from '@/features/chat/ChatPage';
+import { AgentPage } from '@/features/agent/AgentPage';
 import { KnowledgePage } from '@/features/knowledge/KnowledgePage';
 import { ToolsPage } from '@/features/tools/ToolsPage';
 
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
           { path: '/models', element: <ModelsPage /> },
           { path: '/apps', element: <AppsPage /> },
           { path: '/apps/:appId/chat', element: <ChatPage /> },
+          { path: '/apps/:appId/run', element: <AgentPage /> },
           { path: '/knowledge', element: <KnowledgePage /> },
           { path: '/tools', element: <ToolsPage /> },
           { path: '/observability', element: <ObservabilityPage /> },

@@ -302,4 +302,69 @@ export const useChatApiV1AppsAppIdChatPost = <TError = HTTPValidationError,
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * @summary Run Agent Endpoint
+ */
+export const runAgentEndpointApiV1AppsAppIdRunPost = (
+    appId: number,
+    chatInput: ChatInput,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customRequest<unknown>(
+      {url: `/api/v1/apps/${appId}/run`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: chatInput, signal
+    },
+      );
+    }
+  
+
+
+export const getRunAgentEndpointApiV1AppsAppIdRunPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runAgentEndpointApiV1AppsAppIdRunPost>>, TError,{appId: number;data: ChatInput}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof runAgentEndpointApiV1AppsAppIdRunPost>>, TError,{appId: number;data: ChatInput}, TContext> => {
+
+const mutationKey = ['runAgentEndpointApiV1AppsAppIdRunPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runAgentEndpointApiV1AppsAppIdRunPost>>, {appId: number;data: ChatInput}> = (props) => {
+          const {appId,data} = props ?? {};
+
+          return  runAgentEndpointApiV1AppsAppIdRunPost(appId,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunAgentEndpointApiV1AppsAppIdRunPostMutationResult = NonNullable<Awaited<ReturnType<typeof runAgentEndpointApiV1AppsAppIdRunPost>>>
+    export type RunAgentEndpointApiV1AppsAppIdRunPostMutationBody = ChatInput
+    export type RunAgentEndpointApiV1AppsAppIdRunPostMutationError = HTTPValidationError
+
+    /**
+ * @summary Run Agent Endpoint
+ */
+export const useRunAgentEndpointApiV1AppsAppIdRunPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runAgentEndpointApiV1AppsAppIdRunPost>>, TError,{appId: number;data: ChatInput}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof runAgentEndpointApiV1AppsAppIdRunPost>>,
+        TError,
+        {appId: number;data: ChatInput},
+        TContext
+      > => {
+
+      const mutationOptions = getRunAgentEndpointApiV1AppsAppIdRunPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     

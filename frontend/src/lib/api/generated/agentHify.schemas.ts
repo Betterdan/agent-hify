@@ -380,12 +380,17 @@ export interface InvokeIn {
   messages: ChatMessage[];
 }
 
+export type InvokeResultToolCallsAnyOfItem = { [key: string]: unknown };
+
+export type InvokeResultToolCalls = InvokeResultToolCallsAnyOfItem[] | null;
+
 export interface InvokeResult {
   content: string;
   tokens_in: number;
   tokens_out: number;
   cost: number;
   finish_reason: string;
+  tool_calls?: InvokeResultToolCalls;
 }
 
 export type KbConfigThreshold = number | null;
