@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import desc, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
+from agent_hify.modules.observability.annotation_models import Annotation, EvalEvent
 from agent_hify.modules.observability.models import Trace, UsageDaily
 
 
@@ -16,14 +17,54 @@ def insert_trace(session: Session, trace: Trace) -> int:
     return int(trace.id)
 
 
-def select_traces(session: Session, workspace_id: int, limit: int) -> list[Trace]:
-    stmt = (
-        select(Trace)
-        .where(Trace.workspace_id == workspace_id)
-        .order_by(desc(Trace.created_at), desc(Trace.id))
-        .limit(limit)
+def select_traces(
+    session: Session,
+    workspace_id: int,
+    limit: int = 100,
+    app_id: int | None = None,
+    status: str | None = None,
+    days: int = 7,
+) -> list[Trace]:
+    since = datetime.now(UTC) - timedelta(days=days)
+    stmt = select(Trace).where(
+        Trace.workspace_id == workspace_id,
+        Trace.created_at >= since,
+    )
+    if app_id is not None:
+        stmt = stmt.where(Trace.app_id == app_id)
+    if status is not None:
+        stmt = stmt.where(Trace.status == status)
+    stmt = stmt.order_by(desc(Trace.created_at), desc(Trace.id)).limit(limit)
+    return list(session.execute(stmt).scalars().all())
+
+
+def upsert_annotation(session: Session, ann: Annotation) -> Annotation:
+    stmt = select(Annotation).where(
+        Annotation.workspace_id == ann.workspace_id,
+        Annotation.message_id == ann.message_id,
+    )
+    existing = session.execute(stmt).scalar_one_or_none()
+    if existing:
+        existing.rating = ann.rating
+        existing.comment = ann.comment
+        return existing
+    session.add(ann)
+    session.flush()
+    return ann
+
+
+def select_annotations(session: Session, workspace_id: int, message_id: int) -> list[Annotation]:
+    stmt = select(Annotation).where(
+        Annotation.workspace_id == workspace_id,
+        Annotation.message_id == message_id,
     )
     return list(session.execute(stmt).scalars().all())
+
+
+def insert_eval_event(session: Session, ev: EvalEvent) -> int:
+    session.add(ev)
+    session.flush()
+    return int(ev.id)
 
 
 def upsert_usage(

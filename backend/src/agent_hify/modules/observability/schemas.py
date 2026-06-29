@@ -28,10 +28,14 @@ class TraceOut(BaseModel):
     id: int
     type: str
     status: str
+    app_id: int | None = None
+    conversation_id: int | None = None
+    message_id: int | None = None
     tokens_in: int
     tokens_out: int
     cost: Decimal
     latency_ms: int
+    error: str | None = None
     created_at: datetime
 
 
@@ -45,3 +49,24 @@ class UsageDailyOut(BaseModel):
     tokens_out: int
     cost: Decimal
     requests: int
+
+
+class AnnotationIn(BaseModel):
+    message_id: int
+    rating: int  # -1, 0, or 1
+    comment: str | None = None
+
+
+class AnnotationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    message_id: int
+    rating: int
+    comment: str | None
+    created_at: datetime
+
+
+class EvalHookIn(BaseModel):
+    name: str
+    payload: dict[str, object] = {}

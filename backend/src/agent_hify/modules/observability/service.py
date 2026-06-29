@@ -8,8 +8,16 @@ from sqlalchemy.orm import Session
 from agent_hify.core.db import SessionLocal
 from agent_hify.core.logging import get_logger
 from agent_hify.modules.observability import repository
+from agent_hify.modules.observability.annotation_models import Annotation, EvalEvent
 from agent_hify.modules.observability.models import Trace
-from agent_hify.modules.observability.schemas import TraceIn, TraceOut, UsageDailyOut
+from agent_hify.modules.observability.schemas import (
+    AnnotationIn,
+    AnnotationOut,
+    EvalHookIn,
+    TraceIn,
+    TraceOut,
+    UsageDailyOut,
+)
 
 logger = get_logger("agent_hify.observability")
 
@@ -70,9 +78,19 @@ def record_usage(
     )
 
 
-def list_traces(session: Session, workspace_id: int, limit: int = 50) -> list[TraceOut]:
+def list_traces(
+    session: Session,
+    workspace_id: int,
+    limit: int = 100,
+    app_id: int | None = None,
+    status: str | None = None,
+    days: int = 7,
+) -> list[TraceOut]:
     return [
-        TraceOut.model_validate(t) for t in repository.select_traces(session, workspace_id, limit)
+        TraceOut.model_validate(t)
+        for t in repository.select_traces(
+            session, workspace_id, limit=limit, app_id=app_id, status=status, days=days
+        )
     ]
 
 
@@ -80,6 +98,26 @@ def list_usage(session: Session, workspace_id: int) -> list[UsageDailyOut]:
     return [UsageDailyOut.model_validate(u) for u in repository.select_usage(session, workspace_id)]
 
 
-def run_eval_hook(name: str, payload: dict[str, object]) -> None:
-    """评估钩子占位：具体评估方法/指标由项目所有者定义（见 METHODOLOGY.md）。当前仅记录。"""
-    logger.info('{"eval_hook": "%s", "payload_keys": %s}', name, list(payload.keys()))
+def annotate(session: Session, workspace_id: int, data: AnnotationIn) -> AnnotationOut:
+    ann = Annotation(
+        workspace_id=workspace_id,
+        message_id=data.message_id,
+        rating=data.rating,
+        comment=data.comment,
+    )
+    saved = repository.upsert_annotation(session, ann)
+    return AnnotationOut.model_validate(saved)
+
+
+def get_annotations(session: Session, workspace_id: int, message_id: int) -> list[AnnotationOut]:
+    return [
+        AnnotationOut.model_validate(a)
+        for a in repository.select_annotations(session, workspace_id, message_id)
+    ]
+
+
+def run_eval_hook(session: Session, workspace_id: int, data: EvalHookIn) -> int:
+    """评估钩子：记录触发事件。具体评估指标由项目所有者扩展（见 METHODOLOGY.md）。"""
+    logger.info('{"eval_hook": "%s", "payload_keys": %s}', data.name, list(data.payload.keys()))
+    ev = EvalEvent(workspace_id=workspace_id, name=data.name, payload=dict(data.payload))
+    return repository.insert_eval_event(session, ev)
