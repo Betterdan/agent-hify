@@ -8,5 +8,6 @@ COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini ./
 RUN uv sync --frozen --no-dev
+ENV UV_NO_DEV=1
 EXPOSE 8000
 CMD ["uv", "run", "uvicorn", "agent_hify.main:app", "--host", "0.0.0.0", "--port", "8000"]
