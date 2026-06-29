@@ -1,72 +1,77 @@
-# agent-hify
+﻿# agent-hify
 
-> 一个用于实践 Agent 项目方法论的实验性产品仓库。
+> 用方法论驱动，落地一个**类 Dify、面向 50 人内规模**的 LLM 应用 / Agent 平台。首要目标是方法论优先——产品可小，但要走通「问题界定 → 设计 → 实现 → 评估 → 迭代」闭环。
 
-## 项目简介
+## 功能
 
-`agent-hify` 是一个以"实践驱动"为核心的项目，目标不是先验地给出一套完美的 Agent 框架，而是通过**真实地构建一个产品**，沉淀出一套可复用、可验证的 Agent 项目方法论：
+- **模型管理**：多 Provider（OpenAI / Anthropic / 兼容接口）+ 连通性检测 + 加密存储 API Key
+- **聊天助手**：SSE 流式回复 + 多轮对话 + 消息评分（👍👎）
+- **RAG 知识库**：文档上传 → Celery 后台摄取 → pgvector 语义检索
+- **工具集成**：内置工具 / 外部 API / MCP 协议
+- **Agent 循环**：ReAct function-calling，step 事件实时可见
+- **可观测**：trace 查询（状态/延迟/错误）+ 用量统计 + 评估钩子
 
-- 如何拆解一个适合用 Agent 解决的问题
-- 如何设计 Agent 的能力边界、工具集与上下文
-- 如何在工程上保证 Agent 的可观测、可测试、可迭代
-- 如何评估 Agent 的效果并持续优化
+## 技术栈
 
-简而言之：**用一个真实产品，把"做 Agent 项目"这件事本身方法论化。**
+| 层 | 技术 |
+|---|---|
+| 后端 | FastAPI · LiteLLM · SQLAlchemy 2.0 + Alembic · Celery + Redis |
+| 存储 | PostgreSQL 16 + pgvector · Redis |
+| 前端 | Vite + React + TypeScript · Ant Design · TanStack Query |
+| 部署 | Docker Compose（单机） |
 
-## 为什么做这个项目
+## 快速开始
 
-当前 Agent 相关的实践大多停留在 Demo 层面，缺少从"想法 → 产品 → 工程化 → 评估 → 迭代"的完整闭环。本项目希望：
+**详细步骤见 [docs/deployment.md](docs/deployment.md)**，以下是最短路径：
 
-1. 在真实约束下验证方法论，而不是纸上谈兵。
-2. 把过程中踩的坑、有效的模式记录下来，形成可迁移的经验。
-3. 产出既是一个能用的产品，也是一份可参考的方法论文档。
+```bash
+# WSL2 Ubuntu 内执行
 
-## 方法论关注的核心问题
+# 1. 初始化数据库（首次）
+cd /mnt/e/codespace/project/me/agent-hify/backend
+DATABASE_URL=postgresql+psycopg://hify:hify@localhost:5433/hify \
+  uv run alembic upgrade head
 
-| 维度 | 关注点 |
-| --- | --- |
-| 问题定义 | 这个任务真的适合用 Agent 吗？边界在哪里？ |
-| 能力设计 | Agent 需要哪些工具 / 知识 / 记忆？如何组合？ |
-| 上下文工程 | 如何给 Agent 提供恰当的上下文，而不是塞满 token？ |
-| 控制流 | 单 Agent / 多 Agent / 工作流，如何选择？ |
-| 可观测性 | 如何追踪 Agent 的每一步决策与调用？ |
-| 评估 | 用什么指标、什么数据集衡量"好不好"？ |
-| 迭代 | 如何基于反馈快速、安全地改进？ |
+# 2. 启动后端
+DATABASE_URL=postgresql+psycopg://hify:hify@localhost:5433/hify \
+  uv run uvicorn agent_hify.main:app --reload --port 8000
 
-## 项目结构
+# 3. 启动 Worker（知识库功能需要）
+DATABASE_URL=postgresql+psycopg://hify:hify@localhost:5433/hify \
+REDIS_URL=redis://localhost:6379/0 \
+  uv run celery -A agent_hify.worker.celery_app.celery worker -l info
 
-> 当前为初始化阶段，目录结构会随产品形态确定而补充。
-
+# 4. 启动前端
+cd /mnt/e/codespace/project/me/agent-hify/frontend
+npm run dev
 ```
-agent-hify/
-├── README.md          # 项目说明（本文件）
-├── docs/              # 方法论文档、设计决策记录（ADR）
-├── src/               # 产品源码（待定技术栈）
-└── ...
+
+访问 http://localhost:5173，账号：`admin@agent-hify.local` / `admin123`
+
+> 登录后**必须先在「模型配置」页添加 Provider 并注册模型**，聊天/Agent 功能才可用。
+
+## 常用命令
+
+```bash
+# 后端测试
+cd backend && DATABASE_URL=postgresql+psycopg://hify:hify@localhost:5433/hify uv run pytest
+
+# 后端 lint / 类型检查
+cd backend && uv run ruff check . && uv run mypy src/
+
+# 前端测试 / lint / 构建
+cd frontend && npm run test && npm run lint && npm run build
+
+# Docker Compose（需 Docker）
+cd deploy && cp .env.example .env && docker compose up --build
 ```
 
-## 路线图（Roadmap）
+## 文档
 
-- [ ] 确定第一个要解决的真实场景 / 产品形态
-- [ ] 确定技术栈与 Agent 框架选型
-- [ ] 搭建最小可用骨架（MVP）
-- [ ] 接入可观测与评估能力
-- [ ] 沉淀第一版方法论文档
-- [ ] 基于评估结果迭代
-
-## 待确认事项
-
-以下信息确定后会同步更新本文档与项目骨架：
-
-- **产品场景**：要解决的具体问题是什么？
-- **技术栈**：语言、运行时、Agent 框架（如 LangGraph / 自研 / Claude Agent SDK 等）。
-- **交付形态**：CLI / Web 服务 / 库 / 桌面应用？
-- **评估方式**：如何定义"成功"？
-
-## 开发
-
-> 待技术栈确定后补充安装、运行、测试等命令。
-
-## License
-
-待定。
+| 文档 | 说明 |
+|---|---|
+| [DESIGN.md](DESIGN.md) | 架构设计（唯一事实来源） |
+| [METHODOLOGY.md](METHODOLOGY.md) | 项目落地方法论（10 步流程 + 实践归纳） |
+| [docs/deployment.md](docs/deployment.md) | 部署与体验指南 |
+| [docs/standards.md](docs/standards.md) | 编码规范（表/接口/分页/错误码） |
+| [docs/competitive-brief-agent-platforms.md](docs/competitive-brief-agent-platforms.md) | 竞品调研 |
