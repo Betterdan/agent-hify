@@ -14,7 +14,7 @@ from agent_hify.core.error_codes import ErrorCode
 from agent_hify.core.exceptions import AppError, NotFoundError, ValidationError
 from agent_hify.core.pagination import CursorPage, decode_cursor, encode_cursor
 from agent_hify.modules.apps import service as apps_service
-from agent_hify.modules.apps.schemas import AppConfigChat
+from agent_hify.modules.apps.schemas import AppConfigAgent, AppConfigChat
 from agent_hify.modules.knowledge import service as knowledge_service
 from agent_hify.modules.knowledge.schemas import RetrievedChunk
 from agent_hify.modules.models import service as models_service
@@ -281,8 +281,6 @@ async def run_agent(
     payload: ChatInput,
 ) -> AsyncGenerator[str, None]:
     """ReAct function-calling Agent 循环。"""
-    from agent_hify.modules.apps.schemas import AppConfigAgent
-
     session = SessionLocal()
     try:
         app = apps_service.get_app(session, app_id, workspace_id)
@@ -338,6 +336,18 @@ async def run_agent(
         final_answer = ""
         last_result = None
         started = time.monotonic()
+        total_tokens_in = 0
+        total_tokens_out = 0
+        total_cost = Decimal("0")
+
+        # Build name→tool_id mapping once before the loop
+        tool_name_to_id: dict[str, int] = {}
+        for tid in config.tool_ids:
+            try:
+                out = tools_service.get_tool_out(session, tid, workspace_id)
+                tool_name_to_id[out.name] = tid
+            except Exception:
+                continue
 
         # TODO(P0-9): persist intermediate tool_call/tool_result messages for multi-turn context
         for iteration in range(config.max_iterations):
@@ -350,6 +360,9 @@ async def run_agent(
                 extra_params=extra_params,
             )
             last_result = result
+            total_tokens_in += result.tokens_in
+            total_tokens_out += result.tokens_out
+            total_cost += Decimal(str(result.cost))
 
             if result.tool_calls:
                 asst_msg: dict[str, object] = {
@@ -366,9 +379,7 @@ async def run_agent(
                     except Exception:
                         args = {}
 
-                    tool_id = _find_tool_id_by_name(
-                        session, tool_name, workspace_id, list(config.tool_ids)
-                    )
+                    tool_id = tool_name_to_id.get(tool_name)
                     if tool_id is None:
                         tool_result_content = f"Tool '{tool_name}' not found in app config"
                         is_error = True
@@ -407,7 +418,8 @@ async def run_agent(
                 final_answer = result.content
                 break
         else:
-            final_answer = last_result.content if last_result else "（已达最大迭代次数）"
+            _fallback = "（已达最大迭代次数）"
+            final_answer = (last_result.content or _fallback) if last_result else _fallback
 
         latency_ms = int((time.monotonic() - started) * 1000)
 
@@ -422,9 +434,9 @@ async def run_agent(
             ),
         )
 
-        tokens_in = int(str(last_result.tokens_in if last_result else 0))
-        tokens_out = int(str(last_result.tokens_out if last_result else 0))
-        cost = Decimal(str(last_result.cost if last_result else 0))
+        tokens_in = total_tokens_in
+        tokens_out = total_tokens_out
+        cost = total_cost
 
         obs_service.record_trace(
             session,
@@ -454,6 +466,10 @@ async def run_agent(
     except AppError as exc:
         yield _sse("error", {"code": exc.code, "message": exc.message})
     except Exception as exc:
-        yield _sse("error", {"code": 19001, "message": str(exc)})
+        logger.error("run_agent unhandled error: %s", exc, exc_info=True)
+        yield _sse(
+            "error",
+            {"code": ErrorCode.AGENT_INTERNAL_ERROR, "message": "内部错误，请联系管理员"},
+        )
     finally:
         session.close()

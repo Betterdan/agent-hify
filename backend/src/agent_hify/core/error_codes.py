@@ -47,3 +47,4 @@ class ErrorCode(IntEnum):
 
     # 7 runtime
     CONVERSATION_NOT_FOUND = 70001
+    AGENT_INTERNAL_ERROR = 79001
