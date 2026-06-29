@@ -1081,6 +1081,58 @@
         "operationId": "list_traces_api_v1_observability_traces_get",
         "parameters": [
           {
+            "name": "app_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "App Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1141,6 +1193,162 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_list_UsageDailyOut__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/observability/annotations": {
+      "post": {
+        "tags": [
+          "observability"
+        ],
+        "summary": "Create Annotation",
+        "operationId": "create_annotation_api_v1_observability_annotations_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AnnotationOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "observability"
+        ],
+        "summary": "List Annotations",
+        "operationId": "list_annotations_api_v1_observability_annotations_get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_AnnotationOut__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/observability/eval-hook": {
+      "post": {
+        "tags": [
+          "observability"
+        ],
+        "summary": "Trigger Eval Hook",
+        "operationId": "trigger_eval_hook_api_v1_observability_eval_hook_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalHookIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_dict_str__int__"
                 }
               }
             }
@@ -1719,6 +1927,116 @@
   },
   "components": {
     "schemas": {
+      "AnnotationIn": {
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "title": "Message Id"
+          },
+          "rating": {
+            "type": "integer",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Rating"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "rating"
+        ],
+        "title": "AnnotationIn"
+      },
+      "AnnotationOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "message_id": {
+            "type": "integer",
+            "title": "Message Id"
+          },
+          "rating": {
+            "type": "integer",
+            "title": "Rating"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "message_id",
+          "rating",
+          "comment",
+          "created_at"
+        ],
+        "title": "AnnotationOut"
+      },
+      "ApiResponse_AnnotationOut_": {
+        "properties": {
+          "code": {
+            "type": "integer",
+            "title": "Code",
+            "default": 0
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "ok"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnnotationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[AnnotationOut]"
+      },
       "ApiResponse_AppOut_": {
         "properties": {
           "code": {
@@ -2283,6 +2601,90 @@
         "type": "object",
         "title": "ApiResponse[UserOut]"
       },
+      "ApiResponse_dict_str__int__": {
+        "properties": {
+          "code": {
+            "type": "integer",
+            "title": "Code",
+            "default": 0
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "ok"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[dict[str, int]]"
+      },
+      "ApiResponse_list_AnnotationOut__": {
+        "properties": {
+          "code": {
+            "type": "integer",
+            "title": "Code",
+            "default": 0
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "ok"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AnnotationOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[list[AnnotationOut]]"
+      },
       "ApiResponse_list_AppOut__": {
         "properties": {
           "code": {
@@ -2493,48 +2895,6 @@
         "type": "object",
         "title": "ApiResponse[list[UsageDailyOut]]"
       },
-      "AppConfigChat": {
-        "properties": {
-          "model_id": {
-            "type": "integer",
-            "title": "Model Id"
-          },
-          "system_prompt": {
-            "type": "string",
-            "title": "System Prompt",
-            "default": ""
-          },
-          "params": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Params"
-          },
-          "history_limit": {
-            "type": "integer",
-            "title": "History Limit",
-            "default": 20
-          },
-          "kb_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Kb Ids"
-          },
-          "tool_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Tool Ids"
-          }
-        },
-        "type": "object",
-        "required": [
-          "model_id"
-        ],
-        "title": "AppConfigChat"
-      },
       "AppCreate": {
         "properties": {
           "type": {
@@ -2551,7 +2911,9 @@
             "title": "Name"
           },
           "config": {
-            "$ref": "#/components/schemas/AppConfigChat"
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
           }
         },
         "type": "object",
@@ -2623,12 +2985,14 @@
           "config": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AppConfigChat"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Config"
           },
           "status": {
             "anyOf": [
@@ -2884,6 +3248,25 @@
           "updated_at"
         ],
         "title": "DocumentOut"
+      },
+      "EvalHookIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "EvalHookIn"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3598,6 +3981,39 @@
             "type": "string",
             "title": "Status"
           },
+          "app_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Id"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
           "tokens_in": {
             "type": "integer",
             "title": "Tokens In"
@@ -3614,6 +4030,17 @@
           "latency_ms": {
             "type": "integer",
             "title": "Latency Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
           },
           "created_at": {
             "type": "string",

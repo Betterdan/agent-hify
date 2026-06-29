@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Layout, List, Space } from 'antd';
+import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -9,10 +10,36 @@ import {
   streamChat,
   type MessageOut,
 } from '@/features/chat/api';
+import { createAnnotation } from '@/features/observability/api';
 
 interface Bubble {
   role: string;
   text: string;
+}
+
+function ThumbButtons({ messageId }: { messageId: number }) {
+  const [rated, setRated] = useState<number | null>(null);
+  const handleRate = (rating: number) => {
+    void createAnnotation({ message_id: messageId, rating }).then(() => setRated(rating));
+  };
+  return (
+    <Space style={{ fontSize: 12, marginTop: 4 }}>
+      <Button
+        type="text"
+        size="small"
+        icon={<LikeOutlined />}
+        style={rated === 1 ? { color: '#52c41a' } : undefined}
+        onClick={() => handleRate(1)}
+      />
+      <Button
+        type="text"
+        size="small"
+        icon={<DislikeOutlined />}
+        style={rated === -1 ? { color: '#ff4d4f' } : undefined}
+        onClick={() => handleRate(-1)}
+      />
+    </Space>
+  );
 }
 
 function toBubbles(messages: MessageOut[]): Bubble[] {
@@ -31,6 +58,7 @@ export function ChatPage() {
   const [draft, setDraft] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
+  const [lastMsgId, setLastMsgId] = useState<number | undefined>();
 
   const { data: convPage } = useQuery({
     queryKey: ['conversations', appIdNum],
@@ -71,6 +99,7 @@ export function ChatPage() {
             }),
           onDone: (d) => {
             setActiveConv(d.conversation_id);
+            setLastMsgId(d.message_id);
             void qc.invalidateQueries({ queryKey: ['conversations', appIdNum] });
           },
           onError: (_e) => {
@@ -128,6 +157,9 @@ export function ChatPage() {
               >
                 {b.text}
               </span>
+              {b.role === 'assistant' && lastMsgId != null && i === bubbles.length - 1 && (
+                <ThumbButtons messageId={lastMsgId} />
+              )}
             </div>
           ))}
         </div>

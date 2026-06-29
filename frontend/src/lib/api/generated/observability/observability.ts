@@ -5,24 +5,35 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  AnnotationIn,
+  ApiResponseAnnotationOut,
+  ApiResponseDictStrInt,
+  ApiResponseListAnnotationOut,
   ApiResponseListTraceOut,
   ApiResponseListUsageDailyOut,
-  HTTPValidationError
+  EvalHookIn,
+  HTTPValidationError,
+  ListAnnotationsApiV1ObservabilityAnnotationsGetParams,
+  ListTracesApiV1ObservabilityTracesGetParams
 } from '../agentHify.schemas';
 
 import { customRequest } from '../../mutator';
@@ -34,13 +45,14 @@ import { customRequest } from '../../mutator';
  * @summary List Traces
  */
 export const listTracesApiV1ObservabilityTracesGet = (
-    
+    params?: ListTracesApiV1ObservabilityTracesGetParams,
  signal?: AbortSignal
 ) => {
       
       
       return customRequest<ApiResponseListTraceOut>(
-      {url: `/api/v1/observability/traces`, method: 'GET', signal
+      {url: `/api/v1/observability/traces`, method: 'GET',
+        params, signal
     },
       );
     }
@@ -48,23 +60,23 @@ export const listTracesApiV1ObservabilityTracesGet = (
 
 
 
-export const getListTracesApiV1ObservabilityTracesGetQueryKey = () => {
+export const getListTracesApiV1ObservabilityTracesGetQueryKey = (params?: ListTracesApiV1ObservabilityTracesGetParams,) => {
     return [
-    `/api/v1/observability/traces`
+    `/api/v1/observability/traces`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getListTracesApiV1ObservabilityTracesGetQueryOptions = <TData = Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>>, }
+export const getListTracesApiV1ObservabilityTracesGetQueryOptions = <TData = Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError = HTTPValidationError>(params?: ListTracesApiV1ObservabilityTracesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListTracesApiV1ObservabilityTracesGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListTracesApiV1ObservabilityTracesGetQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>> = ({ signal }) => listTracesApiV1ObservabilityTracesGet(signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>> = ({ signal }) => listTracesApiV1ObservabilityTracesGet(params, signal);
 
       
 
@@ -78,7 +90,7 @@ export type ListTracesApiV1ObservabilityTracesGetQueryError = HTTPValidationErro
 
 
 export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError = HTTPValidationError>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>> & Pick<
+ params: undefined |  ListTracesApiV1ObservabilityTracesGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>,
           TError,
@@ -88,7 +100,7 @@ export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnT
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError = HTTPValidationError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>> & Pick<
+ params?: ListTracesApiV1ObservabilityTracesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>,
           TError,
@@ -98,7 +110,7 @@ export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnT
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError = HTTPValidationError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>>, }
+ params?: ListTracesApiV1ObservabilityTracesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -106,11 +118,11 @@ export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnT
  */
 
 export function useListTracesApiV1ObservabilityTracesGet<TData = Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError = HTTPValidationError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>>, }
+ params?: ListTracesApiV1ObservabilityTracesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTracesApiV1ObservabilityTracesGet>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListTracesApiV1ObservabilityTracesGetQueryOptions(options)
+  const queryOptions = getListTracesApiV1ObservabilityTracesGetQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -214,3 +226,225 @@ export function useListUsageApiV1ObservabilityUsageGet<TData = Awaited<ReturnTyp
 
 
 
+/**
+ * @summary Create Annotation
+ */
+export const createAnnotationApiV1ObservabilityAnnotationsPost = (
+    annotationIn: AnnotationIn,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customRequest<ApiResponseAnnotationOut>(
+      {url: `/api/v1/observability/annotations`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: annotationIn, signal
+    },
+      );
+    }
+  
+
+
+export const getCreateAnnotationApiV1ObservabilityAnnotationsPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAnnotationApiV1ObservabilityAnnotationsPost>>, TError,{data: AnnotationIn}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createAnnotationApiV1ObservabilityAnnotationsPost>>, TError,{data: AnnotationIn}, TContext> => {
+
+const mutationKey = ['createAnnotationApiV1ObservabilityAnnotationsPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAnnotationApiV1ObservabilityAnnotationsPost>>, {data: AnnotationIn}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAnnotationApiV1ObservabilityAnnotationsPost(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAnnotationApiV1ObservabilityAnnotationsPostMutationResult = NonNullable<Awaited<ReturnType<typeof createAnnotationApiV1ObservabilityAnnotationsPost>>>
+    export type CreateAnnotationApiV1ObservabilityAnnotationsPostMutationBody = AnnotationIn
+    export type CreateAnnotationApiV1ObservabilityAnnotationsPostMutationError = HTTPValidationError
+
+    /**
+ * @summary Create Annotation
+ */
+export const useCreateAnnotationApiV1ObservabilityAnnotationsPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAnnotationApiV1ObservabilityAnnotationsPost>>, TError,{data: AnnotationIn}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAnnotationApiV1ObservabilityAnnotationsPost>>,
+        TError,
+        {data: AnnotationIn},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateAnnotationApiV1ObservabilityAnnotationsPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary List Annotations
+ */
+export const listAnnotationsApiV1ObservabilityAnnotationsGet = (
+    params: ListAnnotationsApiV1ObservabilityAnnotationsGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customRequest<ApiResponseListAnnotationOut>(
+      {url: `/api/v1/observability/annotations`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getListAnnotationsApiV1ObservabilityAnnotationsGetQueryKey = (params?: ListAnnotationsApiV1ObservabilityAnnotationsGetParams,) => {
+    return [
+    `/api/v1/observability/annotations`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListAnnotationsApiV1ObservabilityAnnotationsGetQueryOptions = <TData = Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError = HTTPValidationError>(params: ListAnnotationsApiV1ObservabilityAnnotationsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAnnotationsApiV1ObservabilityAnnotationsGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>> = ({ signal }) => listAnnotationsApiV1ObservabilityAnnotationsGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAnnotationsApiV1ObservabilityAnnotationsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>>
+export type ListAnnotationsApiV1ObservabilityAnnotationsGetQueryError = HTTPValidationError
+
+
+export function useListAnnotationsApiV1ObservabilityAnnotationsGet<TData = Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError = HTTPValidationError>(
+ params: ListAnnotationsApiV1ObservabilityAnnotationsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAnnotationsApiV1ObservabilityAnnotationsGet<TData = Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError = HTTPValidationError>(
+ params: ListAnnotationsApiV1ObservabilityAnnotationsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAnnotationsApiV1ObservabilityAnnotationsGet<TData = Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError = HTTPValidationError>(
+ params: ListAnnotationsApiV1ObservabilityAnnotationsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Annotations
+ */
+
+export function useListAnnotationsApiV1ObservabilityAnnotationsGet<TData = Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError = HTTPValidationError>(
+ params: ListAnnotationsApiV1ObservabilityAnnotationsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnnotationsApiV1ObservabilityAnnotationsGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAnnotationsApiV1ObservabilityAnnotationsGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * @summary Trigger Eval Hook
+ */
+export const triggerEvalHookApiV1ObservabilityEvalHookPost = (
+    evalHookIn: EvalHookIn,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customRequest<ApiResponseDictStrInt>(
+      {url: `/api/v1/observability/eval-hook`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: evalHookIn, signal
+    },
+      );
+    }
+  
+
+
+export const getTriggerEvalHookApiV1ObservabilityEvalHookPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerEvalHookApiV1ObservabilityEvalHookPost>>, TError,{data: EvalHookIn}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof triggerEvalHookApiV1ObservabilityEvalHookPost>>, TError,{data: EvalHookIn}, TContext> => {
+
+const mutationKey = ['triggerEvalHookApiV1ObservabilityEvalHookPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerEvalHookApiV1ObservabilityEvalHookPost>>, {data: EvalHookIn}> = (props) => {
+          const {data} = props ?? {};
+
+          return  triggerEvalHookApiV1ObservabilityEvalHookPost(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriggerEvalHookApiV1ObservabilityEvalHookPostMutationResult = NonNullable<Awaited<ReturnType<typeof triggerEvalHookApiV1ObservabilityEvalHookPost>>>
+    export type TriggerEvalHookApiV1ObservabilityEvalHookPostMutationBody = EvalHookIn
+    export type TriggerEvalHookApiV1ObservabilityEvalHookPostMutationError = HTTPValidationError
+
+    /**
+ * @summary Trigger Eval Hook
+ */
+export const useTriggerEvalHookApiV1ObservabilityEvalHookPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerEvalHookApiV1ObservabilityEvalHookPost>>, TError,{data: EvalHookIn}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof triggerEvalHookApiV1ObservabilityEvalHookPost>>,
+        TError,
+        {data: EvalHookIn},
+        TContext
+      > => {
+
+      const mutationOptions = getTriggerEvalHookApiV1ObservabilityEvalHookPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    

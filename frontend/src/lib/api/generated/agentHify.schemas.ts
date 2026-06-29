@@ -4,6 +4,41 @@
  * agent-hify
  * OpenAPI spec version: 0.1.0
  */
+export type AnnotationInComment = string | null;
+
+export interface AnnotationIn {
+  message_id: number;
+  /**
+   * @minimum -1
+   * @maximum 1
+   */
+  rating: number;
+  comment?: AnnotationInComment;
+}
+
+export type AnnotationOutComment = string | null;
+
+export interface AnnotationOut {
+  id: number;
+  message_id: number;
+  rating: number;
+  comment: AnnotationOutComment;
+  created_at: string;
+}
+
+export type ApiResponseAnnotationOutData = AnnotationOut | null;
+
+export type ApiResponseAnnotationOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseAnnotationOutDetails = ApiResponseAnnotationOutDetailsAnyOf | null;
+
+export interface ApiResponseAnnotationOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseAnnotationOutData;
+  details?: ApiResponseAnnotationOutDetails;
+}
+
 export type ApiResponseAppOutData = AppOut | null;
 
 export type ApiResponseAppOutDetailsAnyOf = { [key: string]: unknown };
@@ -197,6 +232,34 @@ export interface ApiResponseUserOut {
   details?: ApiResponseUserOutDetails;
 }
 
+export type ApiResponseDictStrIntDataAnyOf = {[key: string]: number};
+
+export type ApiResponseDictStrIntData = ApiResponseDictStrIntDataAnyOf | null;
+
+export type ApiResponseDictStrIntDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseDictStrIntDetails = ApiResponseDictStrIntDetailsAnyOf | null;
+
+export interface ApiResponseDictStrInt {
+  code?: number;
+  message?: string;
+  data?: ApiResponseDictStrIntData;
+  details?: ApiResponseDictStrIntDetails;
+}
+
+export type ApiResponseListAnnotationOutData = AnnotationOut[] | null;
+
+export type ApiResponseListAnnotationOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseListAnnotationOutDetails = ApiResponseListAnnotationOutDetailsAnyOf | null;
+
+export interface ApiResponseListAnnotationOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseListAnnotationOutData;
+  details?: ApiResponseListAnnotationOutDetails;
+}
+
 export type ApiResponseListAppOutData = AppOut[] | null;
 
 export type ApiResponseListAppOutDetailsAnyOf = { [key: string]: unknown };
@@ -262,17 +325,6 @@ export interface ApiResponseListUsageDailyOut {
   details?: ApiResponseListUsageDailyOutDetails;
 }
 
-export type AppConfigChatParams = { [key: string]: unknown };
-
-export interface AppConfigChat {
-  model_id: number;
-  system_prompt?: string;
-  params?: AppConfigChatParams;
-  history_limit?: number;
-  kb_ids?: number[];
-  tool_ids?: number[];
-}
-
 export type AppCreateType = typeof AppCreateType[keyof typeof AppCreateType];
 
 
@@ -282,10 +334,12 @@ export const AppCreateType = {
   agent: 'agent',
 } as const;
 
+export type AppCreateConfig = { [key: string]: unknown };
+
 export interface AppCreate {
   type?: AppCreateType;
   name: string;
-  config: AppConfigChat;
+  config: AppCreateConfig;
 }
 
 export type AppOutConfig = { [key: string]: unknown };
@@ -302,7 +356,9 @@ export interface AppOut {
 
 export type AppUpdateName = string | null;
 
-export type AppUpdateConfig = AppConfigChat | null;
+export type AppUpdateConfigAnyOf = { [key: string]: unknown };
+
+export type AppUpdateConfig = AppUpdateConfigAnyOf | null;
 
 export type AppUpdateStatus = 'draft' | 'published' | null;
 
@@ -370,6 +426,13 @@ export interface DocumentOut {
   char_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export type EvalHookInPayload = { [key: string]: unknown };
+
+export interface EvalHookIn {
+  name: string;
+  payload?: EvalHookInPayload;
 }
 
 export interface HTTPValidationError {
@@ -587,15 +650,27 @@ export interface ToolUpdate {
   enabled?: ToolUpdateEnabled;
 }
 
+export type TraceOutAppId = number | null;
+
+export type TraceOutConversationId = number | null;
+
+export type TraceOutMessageId = number | null;
+
+export type TraceOutError = string | null;
+
 export interface TraceOut {
   id: number;
   type: string;
   status: string;
+  app_id?: TraceOutAppId;
+  conversation_id?: TraceOutConversationId;
+  message_id?: TraceOutMessageId;
   tokens_in: number;
   tokens_out: number;
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   cost: string;
   latency_ms: number;
+  error?: TraceOutError;
   created_at: string;
 }
 
@@ -655,6 +730,17 @@ page?: number;
  * @maximum 100
  */
 page_size?: number;
+};
+
+export type ListTracesApiV1ObservabilityTracesGetParams = {
+app_id?: number | null;
+status?: string | null;
+days?: number;
+limit?: number;
+};
+
+export type ListAnnotationsApiV1ObservabilityAnnotationsGetParams = {
+message_id: number;
 };
 
 export type ListConversationsApiV1AppsAppIdConversationsGetParams = {
