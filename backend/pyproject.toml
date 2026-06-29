@@ -72,6 +72,10 @@ packages = ["agent_hify"]
 module = ["litellm", "litellm.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["pgvector", "pgvector.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
@@ -155,6 +159,7 @@ forbidden_modules = [
 ]
 
 # knowledge(L2') 禁止依赖 runtime/tools/apps（只能依赖 core/identity/observability/models）
+# router 作为入口层允许调用 worker.tasks 派发摄取任务（架构许可，仅限 router→worker.tasks）
 [[tool.importlinter.contracts]]
 name = "knowledge does not depend on upper layers"
 type = "forbidden"
@@ -164,4 +169,7 @@ forbidden_modules = [
     "agent_hify.modules.tools",
     "agent_hify.modules.apps",
     "agent_hify.worker",
+]
+ignore_imports = [
+    "agent_hify.modules.knowledge.router -> agent_hify.worker.tasks",
 ]

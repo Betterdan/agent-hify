@@ -13,12 +13,14 @@ def create_app() -> FastAPI:
 
     from agent_hify.modules.apps.router import router as apps_router
     from agent_hify.modules.identity.router import router as identity_router
+    from agent_hify.modules.knowledge.router import router as knowledge_router
     from agent_hify.modules.models.router import router as models_router
     from agent_hify.modules.observability.router import router as observability_router
     from agent_hify.modules.runtime.router import router as runtime_router
 
     app.include_router(apps_router)
     app.include_router(identity_router)
+    app.include_router(knowledge_router, prefix="/api/v1")
     app.include_router(models_router)
     app.include_router(observability_router)
     app.include_router(runtime_router)
