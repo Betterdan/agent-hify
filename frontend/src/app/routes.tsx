@@ -8,6 +8,7 @@ import { ObservabilityPage } from '@/features/observability/ObservabilityPage';
 import { AppsPage } from '@/features/apps/AppsPage';
 import { ChatPage } from '@/features/chat/ChatPage';
 import { KnowledgePage } from '@/features/knowledge/KnowledgePage';
+import { ToolsPage } from '@/features/tools/ToolsPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
           { path: '/apps', element: <AppsPage /> },
           { path: '/apps/:appId/chat', element: <ChatPage /> },
           { path: '/knowledge', element: <KnowledgePage /> },
+          { path: '/tools', element: <ToolsPage /> },
           { path: '/observability', element: <ObservabilityPage /> },
         ],
       },

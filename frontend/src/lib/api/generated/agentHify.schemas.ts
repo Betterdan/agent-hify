@@ -171,6 +171,19 @@ export interface ApiResponseTokenOut {
   details?: ApiResponseTokenOutDetails;
 }
 
+export type ApiResponseToolOutData = ToolOut | null;
+
+export type ApiResponseToolOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseToolOutDetails = ApiResponseToolOutDetailsAnyOf | null;
+
+export interface ApiResponseToolOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseToolOutData;
+  details?: ApiResponseToolOutDetails;
+}
+
 export type ApiResponseUserOutData = UserOut | null;
 
 export type ApiResponseUserOutDetailsAnyOf = { [key: string]: unknown };
@@ -210,6 +223,19 @@ export interface ApiResponseListModelOut {
   details?: ApiResponseListModelOutDetails;
 }
 
+export type ApiResponseListToolOutData = ToolOut[] | null;
+
+export type ApiResponseListToolOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseListToolOutDetails = ApiResponseListToolOutDetailsAnyOf | null;
+
+export interface ApiResponseListToolOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseListToolOutData;
+  details?: ApiResponseListToolOutDetails;
+}
+
 export type ApiResponseListTraceOutData = TraceOut[] | null;
 
 export type ApiResponseListTraceOutDetailsAnyOf = { [key: string]: unknown };
@@ -244,6 +270,7 @@ export interface AppConfigChat {
   params?: AppConfigChatParams;
   history_limit?: number;
   kb_ids?: number[];
+  tool_ids?: number[];
 }
 
 export type AppCreateType = typeof AppCreateType[keyof typeof AppCreateType];
@@ -500,6 +527,59 @@ export interface ProviderOut {
 export interface TokenOut {
   access_token: string;
   token_type?: string;
+}
+
+export type ToolCreateSchema = { [key: string]: unknown };
+
+export type ToolCreateCredentials = string | null;
+
+export type ToolCreateConfig = { [key: string]: unknown };
+
+export interface ToolCreate {
+  type: string;
+  name: string;
+  schema?: ToolCreateSchema;
+  credentials?: ToolCreateCredentials;
+  config?: ToolCreateConfig;
+  enabled?: boolean;
+}
+
+export type ToolOutSchema = { [key: string]: unknown };
+
+export type ToolOutConfig = { [key: string]: unknown };
+
+export interface ToolOut {
+  id: number;
+  workspace_id: number;
+  type: string;
+  name: string;
+  schema: ToolOutSchema;
+  config: ToolOutConfig;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ToolUpdateName = string | null;
+
+export type ToolUpdateSchemaAnyOf = { [key: string]: unknown };
+
+export type ToolUpdateSchema = ToolUpdateSchemaAnyOf | null;
+
+export type ToolUpdateCredentials = string | null;
+
+export type ToolUpdateConfigAnyOf = { [key: string]: unknown };
+
+export type ToolUpdateConfig = ToolUpdateConfigAnyOf | null;
+
+export type ToolUpdateEnabled = boolean | null;
+
+export interface ToolUpdate {
+  name?: ToolUpdateName;
+  schema?: ToolUpdateSchema;
+  credentials?: ToolUpdateCredentials;
+  config?: ToolUpdateConfig;
+  enabled?: ToolUpdateEnabled;
 }
 
 export interface TraceOut {

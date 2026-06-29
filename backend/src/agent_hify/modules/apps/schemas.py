@@ -16,6 +16,7 @@ class AppConfigChat(BaseModel):
     )
     history_limit: int = 20
     kb_ids: list[int] = Field(default_factory=list)
+    tool_ids: list[int] = Field(default_factory=list)
 
 
 class AppCreate(BaseModel):
