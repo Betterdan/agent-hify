@@ -127,7 +127,10 @@ docker compose up --build
 
 ### 步骤 3：访问
 
-浏览器打开 **http://localhost**（nginx 80 端口），用相同账号登录。
+浏览器打开 **http://localhost:8080**，用相同账号登录。
+
+> 端口说明：前端 **8080**（nginx），API **8001**（可直接访问 Swagger: http://localhost:8001/docs）。
+> postgres/redis 不暴露宿主机端口（容器间内网互通，无需对外）。
 
 ### 常用操作
 
