@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0006"
 down_revision = "0005"
@@ -29,7 +30,7 @@ def upgrade() -> None:
             sa.ForeignKey("models.id"),
             nullable=False,
         ),
-        sa.Column("config", sa.JSON, nullable=False, server_default="{}"),
+        sa.Column("config", JSONB, nullable=False, server_default="{}"),
         sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column(
             "created_at",
