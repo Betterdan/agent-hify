@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -57,6 +57,7 @@ class InvokeResult(BaseModel):
     tokens_out: int
     cost: float
     finish_reason: str
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 class ConnectivityResult(BaseModel):

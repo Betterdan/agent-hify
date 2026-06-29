@@ -73,6 +73,58 @@ async def invoke(ref: ModelRef, messages: list[dict[str, str]]) -> InvokeResult:
     )
 
 
+async def invoke_with_tools(
+    ref: ModelRef,
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]] | None = None,
+    extra_params: dict[str, Any] | None = None,
+) -> InvokeResult:
+    async def _call() -> InvokeResult:
+        kwargs: dict[str, Any] = {
+            "model": ref.model_key,
+            "messages": messages,
+            "api_key": ref.api_key,
+            "api_base": ref.base_url,
+            **ref.default_params,
+            **(extra_params or {}),
+        }
+        if tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
+        resp = await litellm.acompletion(**kwargs)
+        choice = resp.choices[0]
+        usage = resp.usage
+        try:
+            cost = float(litellm.completion_cost(completion_response=resp))
+        except Exception:
+            cost = 0.0
+        parsed_tool_calls: list[dict[str, Any]] | None = None
+        if choice.message.tool_calls:
+            parsed_tool_calls = [
+                {
+                    "id": tc.id,
+                    "type": tc.type,
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in choice.message.tool_calls
+            ]
+        return InvokeResult(
+            content=choice.message.content or "",
+            tokens_in=int(usage.prompt_tokens),
+            tokens_out=int(usage.completion_tokens),
+            cost=cost,
+            finish_reason=str(choice.finish_reason or "stop"),
+            tool_calls=parsed_tool_calls,
+        )
+
+    return await call_with_resilience(
+        f"{ref.provider_id}:invoke_tools", _call, timeout=_TIMEOUT, retryable=_RETRYABLE
+    )
+
+
 async def embed(ref: ModelRef, texts: list[str]) -> list[list[float]]:
     async def _call() -> list[list[float]]:
         resp = await litellm.aembedding(

@@ -5,6 +5,7 @@ import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -134,6 +135,64 @@ async def invoke(
                 latency_ms=latency_ms,
                 input={"messages": payload},
                 output={"content": result.content},
+            ),
+        )
+        obs_service.record_usage(
+            session,
+            workspace_id=workspace_id,
+            day=datetime.now(UTC).date(),
+            model_id=model_id,
+            tokens_in=result.tokens_in,
+            tokens_out=result.tokens_out,
+            cost=Decimal(str(result.cost)),
+        )
+    return result
+
+
+async def invoke_with_tools(
+    session: Session,
+    *,
+    model_id: int,
+    workspace_id: int,
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]] | None = None,
+    extra_params: dict[str, Any] | None = None,
+    record: bool = True,
+) -> InvokeResult:
+    ref = resolve_ref(session, model_id)
+    started = time.monotonic()
+    try:
+        result = await adapter.invoke_with_tools(
+            ref, messages, tools=tools, extra_params=extra_params
+        )
+    except Exception as exc:
+        if record:
+            latency_ms = int((time.monotonic() - started) * 1000)
+            obs_service.record_trace_committed(
+                TraceIn(
+                    workspace_id=workspace_id,
+                    type="llm_call",
+                    status="error",
+                    latency_ms=latency_ms,
+                    input={"messages": messages},
+                    error=str(exc),
+                )
+            )
+        raise
+    latency_ms = int((time.monotonic() - started) * 1000)
+    if record:
+        obs_service.record_trace(
+            session,
+            TraceIn(
+                workspace_id=workspace_id,
+                type="llm_call",
+                status="ok",
+                tokens_in=result.tokens_in,
+                tokens_out=result.tokens_out,
+                cost=Decimal(str(result.cost)),
+                latency_ms=latency_ms,
+                input={"messages": messages},
+                output={"content": result.content, "tool_calls": result.tool_calls},
             ),
         )
         obs_service.record_usage(

@@ -151,14 +151,13 @@ forbidden_modules = [
     "agent_hify.worker",
 ]
 
-# runtime(L4) 编排层：可向下依赖 apps/models/observability/knowledge，
-# 但禁止依赖 tools 与 worker（分层约束）。
+# runtime(L4) 编排层：可向下依赖 apps/models/observability/knowledge/tools，
+# 但禁止依赖 worker（分层约束）。
 [[tool.importlinter.contracts]]
-name = "runtime does not depend on tools/worker"
+name = "runtime does not depend on worker"
 type = "forbidden"
 source_modules = ["agent_hify.modules.runtime"]
 forbidden_modules = [
-    "agent_hify.modules.tools",
     "agent_hify.worker",
 ]
 

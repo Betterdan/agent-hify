@@ -49,3 +49,13 @@ async def chat(
     # 注入会话此时已关闭。生成器内部自建 SessionLocal()（见 service.run_chat）。
     generator = service.run_chat(app_id, current.workspace_id, current.id, payload)
     return StreamingResponse(generator, media_type="text/event-stream")
+
+
+@router.post("/apps/{app_id}/run")
+async def run_agent_endpoint(
+    app_id: int,
+    payload: ChatInput,
+    current: UserOut = Depends(get_current_user),
+) -> StreamingResponse:
+    generator = service.run_agent(app_id, current.workspace_id, current.id, payload)
+    return StreamingResponse(generator, media_type="text/event-stream")
