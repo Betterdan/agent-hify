@@ -339,6 +339,7 @@ async def run_agent(
         last_result = None
         started = time.monotonic()
 
+        # TODO(P0-9): persist intermediate tool_call/tool_result messages for multi-turn context
         for iteration in range(config.max_iterations):
             result = await models_service.invoke_with_tools(
                 session,

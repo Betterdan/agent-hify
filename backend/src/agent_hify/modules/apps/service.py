@@ -21,7 +21,7 @@ def create_app(session: Session, workspace_id: int, created_by: int, dto: AppCre
         workspace_id=workspace_id,
         type=dto.type,
         name=dto.name,
-        config=dto.config.model_dump(),
+        config=dto.config,
         created_by=created_by,
     )
     repository.insert_app(session, app)
@@ -41,7 +41,7 @@ def update_app(session: Session, app_id: int, workspace_id: int, dto: AppUpdate)
     if dto.name is not None:
         app.name = dto.name
     if dto.config is not None:
-        app.config = dto.config.model_dump()
+        app.config = dto.config
     if dto.status is not None:
         app.status = dto.status
     repository.update_app(session, app)

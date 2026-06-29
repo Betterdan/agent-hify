@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,12 +35,12 @@ class AppConfigAgent(BaseModel):
 class AppCreate(BaseModel):
     type: AppType = "chat"
     name: str
-    config: AppConfigChat
+    config: dict[str, Any]
 
 
 class AppUpdate(BaseModel):
     name: str | None = None
-    config: AppConfigChat | None = None
+    config: dict[str, Any] | None = None
     status: Literal["draft", "published"] | None = None
 
 
