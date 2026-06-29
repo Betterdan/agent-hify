@@ -1,6 +1,6 @@
 # Agent 产品落地方法论
 
-> 版本：v0.3（草案）｜ 日期：2026-06-28
+> 版本：v0.4（草案）｜ 日期：2026-06-29
 > 性质：记录 `agent-hify` 立项与实现过程中**实际走过的方法论**，整理成可复用流程。
 > 归属：方法论由项目所有者定义与演进；本文是对已发生过程的归纳，随实践**定时更新**。
 > 配套：[DESIGN.md](./DESIGN.md)（应用本方法论的产出）、[CLAUDE.md](./CLAUDE.md)（项目行为指令）
@@ -120,8 +120,41 @@
 | ⑤ 归档 | DESIGN（决策部分）+ 本文件 |
 | ⑥ 架构 | DESIGN §5–§10 + CLAUDE.md（行为指令） |
 | ⑦ 工程搭建 | ✅ P0-1（后端骨架：Docker/Alembic+pgvector/Celery/import-linter，一键起） |
-| ⑧ 功能实现 | 进行中：✅ P0-2（core 横切 + identity 登录鉴权）；✅ P0-3（models 模型网关 + observability 基线 + 外部调用韧性）；P0-4（前端控制台）待办（见 DESIGN §12、`docs/superpowers/STATUS.md`） |
-| ⑨⑩ 测试/部署 | 待办；实现期已建测试分层（unit / `@pytest.mark.integration`）与全分支总评审纪律（见 §2bis） |
+| ⑧ 功能实现 | ✅ P0-2（core 横切 + identity 登录鉴权）；✅ P0-3（models 模型网关 + observability 基线 + 外部调用韧性）；✅ P0-4（前端控制台：Vite+React+TS+orval）；✅ P0-5（聊天助手 + SSE 流式）；✅ P0-6（RAG 知识库 + Celery 摄取 + pgvector 检索）；✅ P0-7（工具集成：builtin/api/mcp + 协议层）；✅ P0-8（ReAct Agent 循环 + step SSE 事件）；✅ P0-9（Annotation 评分 + eval_events + 增强 trace 查询） |
+| ⑨⑩ 测试/部署 | 集成测试覆盖全链路（每功能阶段 2–5 tests）；部署待补（Docker Compose 配置基础存在）；见 §2bis + §2ter |
+
+---
+
+## 2ter. P0-5～P0-9 SDD 深化阶段归纳（2026-06-29）
+
+> 在 §2bis 批量+总评审基础上，P0-5～P0-9 改回逐任务 SDD（每任务独立子代理实现 + 评审 + 修复）并稳定运行，补充以下实战纪律。
+
+### SDD 节奏：逐任务实现+评审并行可折叠
+
+- 实现代理 Task N 运行期间，同时写 Task N+1 brief 并派发，显著节省 wall-clock。前提：两任务对同一模块无写冲突。
+- 评审代理输出一个独立报告文件而非在主上下文展开，是保持控制器上下文干净的关键（file handoff 原则）。
+
+### 架构守护：import-linter 作为实施约束的最后一道防线
+
+- P0-7→P0-8 的工具调用要求 runtime 依赖 tools，必须在 `pyproject.toml` 中更新 import-linter 合约才能让实现通过。**依赖层变化必须对应合约变更，两者同步提交**，否则 CI 红灯即时暴露。
+- 跨层边界的"只走 service 接口"原则（禁止 import 其他模块的 repository/models）在 SDD 中由评审代理在代码层面核验，配合 import-linter 机器检查，双重保障。
+
+### 安全性：信息泄漏是 SSE 流式架构的易犯问题
+
+- 因异常在 `finally` 中 yield，`str(exc)` 会把 Pydantic 字段名、SQLAlchemy SQL 片段、API key 路径等内部信息直接送达浏览器。**所有 SSE 异常分支须用固定字符串 + logger.error，不直接序列化 exc**（P0-8 最终评审发现并修复）。
+
+### 竞态安全：DB 原子操作替代读-改-写
+
+- "Upsert" 若用 read-then-write（TOCTOU），在并发场景下两个请求同时到达会触发 unique constraint 500。解决方案：用 `pg_insert ... ON CONFLICT DO UPDATE`，让 PostgreSQL 原子执行，避免中间状态（P0-9 最终评审发现，用已导入的 `pg_insert` 一次修复）。
+- 同一文件内已有的原子 upsert 范例（`upsert_usage`）是"已存在的模式即规范"——实现新函数时先查同文件是否有可复用模式。
+
+### 已知局限账本（Minor deferred）
+
+每阶段评审积累的 Minor 不立即修复，写入进度账本，供最终评审或下阶段集中处理。这种"有意延后"而非静默忽略的做法，让技术债可见且可控：
+- 工具调用步骤未持久化到 Message 表（multi-turn agent 会丢失工具历史 context）
+- 无 AbortController 中止 SSE fetch（切换页面时 stream 继续跑）
+- AgentPage 消息气泡用 `<Tag>` 而非 `<Typography.Paragraph>`（长文换行体验差）
+- ChatPage lastMsgId 未在切换历史对话时重置（评分可能对应错误 message_id）
 
 ---
 
