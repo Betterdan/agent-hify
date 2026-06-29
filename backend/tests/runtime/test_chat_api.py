@@ -8,6 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent_hify.main import create_app
+from agent_hify.modules.knowledge import service as knowledge_service
+from agent_hify.modules.knowledge.schemas import RetrievedChunk
 from agent_hify.modules.models import adapter as models_adapter
 
 
@@ -157,3 +159,115 @@ def test_chat_missing_app_yields_error_event() -> None:
     events = _parse_sse(resp.text)
     assert events[-1][0] == "error"
     assert events[-1][1]["code"] == 60003
+
+
+@pytest.mark.integration
+def test_chat_rag_injection(monkeypatch: pytest.MonkeyPatch) -> None:
+    """kb_ids 非空时，RAG 检索结果应被注入为 system context 且对话正常完成。"""
+    called_with: list[dict[str, object]] = []
+
+    async def fake_retrieve(
+        session: object,
+        *,
+        kb_id: int,
+        workspace_id: int,
+        query: str,
+    ) -> list[RetrievedChunk]:
+        called_with.append({"kb_id": kb_id, "workspace_id": workspace_id, "query": query})
+        return [RetrievedChunk(chunk_id=1, kb_id=kb_id, content="测试知识片段", score=0.9)]
+
+    async def fake_stream(
+        ref: object,
+        messages: object,
+        usage_sink: dict[str, object] | None = None,
+        extra_params: dict[str, object] | None = None,
+    ) -> AsyncGenerator[str, None]:
+        yield "ok"
+
+    monkeypatch.setattr(knowledge_service, "retrieve", fake_retrieve)
+    monkeypatch.setattr(models_adapter, "invoke_stream", fake_stream)
+
+    client = TestClient(create_app())
+    h = {"Authorization": f"Bearer {_token(client)}"}
+    model_id = _create_model(client, h)
+    created = client.post(
+        "/api/v1/apps",
+        headers=h,
+        json={
+            "type": "chat",
+            "name": f"chat-{uuid.uuid4().hex[:8]}",
+            "config": {
+                "model_id": model_id,
+                "system_prompt": "你是助手",
+                "params": {},
+                "history_limit": 20,
+                "kb_ids": [999],
+            },
+        },
+    )
+    app_id = int(created.json()["data"]["id"])
+
+    resp = client.post(f"/api/v1/apps/{app_id}/chat", headers=h, json={"message": "查询测试"})
+    assert resp.status_code == 200
+    events = _parse_sse(resp.text)
+    kinds = [e for e, _ in events]
+    assert "done" in kinds
+    assert "error" not in kinds
+
+    # retrieve 被调用一次，参数正确
+    assert len(called_with) == 1
+    assert called_with[0]["kb_id"] == 999
+    assert called_with[0]["query"] == "查询测试"
+
+
+@pytest.mark.integration
+def test_chat_rag_failure_degrades_gracefully(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RAG 检索抛异常时，对话应静默降级（仅记录 warning），正常返回 200 不传播错误。"""
+
+    async def failing_retrieve(
+        session: object,
+        *,
+        kb_id: int,
+        workspace_id: int,
+        query: str,
+    ) -> list[RetrievedChunk]:
+        raise Exception("embedding failed")
+
+    async def fake_stream(
+        ref: object,
+        messages: object,
+        usage_sink: dict[str, object] | None = None,
+        extra_params: dict[str, object] | None = None,
+    ) -> AsyncGenerator[str, None]:
+        yield "ok"
+
+    monkeypatch.setattr(knowledge_service, "retrieve", failing_retrieve)
+    monkeypatch.setattr(models_adapter, "invoke_stream", fake_stream)
+
+    client = TestClient(create_app())
+    h = {"Authorization": f"Bearer {_token(client)}"}
+    model_id = _create_model(client, h)
+    created = client.post(
+        "/api/v1/apps",
+        headers=h,
+        json={
+            "type": "chat",
+            "name": f"chat-{uuid.uuid4().hex[:8]}",
+            "config": {
+                "model_id": model_id,
+                "system_prompt": "你是助手",
+                "params": {},
+                "history_limit": 20,
+                "kb_ids": [999],
+            },
+        },
+    )
+    app_id = int(created.json()["data"]["id"])
+
+    resp = client.post(f"/api/v1/apps/{app_id}/chat", headers=h, json={"message": "查询测试"})
+    assert resp.status_code == 200
+    events = _parse_sse(resp.text)
+    kinds = [e for e, _ in events]
+    # 检索失败被静默吞掉，对话仍正常完成，不应有 error 事件
+    assert "done" in kinds
+    assert "error" not in kinds
