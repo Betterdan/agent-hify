@@ -54,7 +54,7 @@ class UsageDailyOut(BaseModel):
 
 class AnnotationIn(BaseModel):
     message_id: int
-    rating: Annotated[int, Field(ge=-1, le=1)]
+    rating: Annotated[int, Field(ge=-1, le=1)]  # -1=thumbs-down, 0=neutral, 1=thumbs-up
     comment: str | None = None
 
 

@@ -55,6 +55,34 @@ async def test_upsert_annotation(app):
 
 
 @pytest.mark.asyncio
+async def test_annotation_workspace_isolation(app):
+    """Annotation created in workspace A cannot be read from workspace B."""
+    import random
+
+    msg_id = random.randint(100000, 999999)
+
+    # Create annotation under workspace 1 (default app fixture, workspace_id=1)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/observability/annotations",
+            json={"message_id": msg_id, "rating": 1},
+        )
+    assert resp.status_code == 200
+
+    # Try to GET that annotation from workspace 2 — should return empty list
+    ws2_user = UserOut(id=2, email="ws2@test.com", role="admin", workspace_id=2)
+    app2 = create_app()
+    app2.dependency_overrides[get_current_user] = lambda: ws2_user
+
+    async with AsyncClient(transport=ASGITransport(app=app2), base_url="http://test") as client:
+        resp2 = await client.get(
+            f"/api/v1/observability/annotations?message_id={msg_id}",
+        )
+    assert resp2.status_code == 200
+    assert resp2.json()["data"] == []
+
+
+@pytest.mark.asyncio
 async def test_eval_hook(app):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(

@@ -39,19 +39,28 @@ def select_traces(
 
 
 def upsert_annotation(session: Session, ann: Annotation) -> Annotation:
-    stmt = select(Annotation).where(
-        Annotation.workspace_id == ann.workspace_id,
-        Annotation.message_id == ann.message_id,
+    now = datetime.now(UTC)
+    stmt = (
+        pg_insert(Annotation)
+        .values(
+            workspace_id=ann.workspace_id,
+            message_id=ann.message_id,
+            rating=ann.rating,
+            comment=ann.comment,
+            created_at=now,
+            updated_at=now,
+        )
+        .on_conflict_do_update(
+            index_elements=["workspace_id", "message_id"],
+            set_={
+                "rating": ann.rating,
+                "comment": ann.comment,
+                "updated_at": now,
+            },
+        )
+        .returning(Annotation)
     )
-    existing = session.execute(stmt).scalar_one_or_none()
-    if existing:
-        existing.rating = ann.rating
-        existing.comment = ann.comment
-        existing.updated_at = datetime.now(UTC)
-        return existing
-    session.add(ann)
-    session.flush()
-    return ann
+    return session.execute(stmt).scalar_one()
 
 
 def select_annotations(session: Session, workspace_id: int, message_id: int) -> list[Annotation]:

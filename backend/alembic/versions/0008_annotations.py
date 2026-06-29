@@ -22,7 +22,7 @@ def upgrade() -> None:
         sa.Column("id", sa.BigInteger, primary_key=True),
         sa.Column("workspace_id", sa.BigInteger, nullable=False),
         sa.Column("message_id", sa.BigInteger, nullable=False),
-        sa.Column("rating", sa.SmallInteger, nullable=False),  # -1=thumbs-down, 1=thumbs-up
+        sa.Column("rating", sa.SmallInteger, nullable=False),  # -1=down, 0=neutral, 1=up
         sa.Column("comment", sa.String(2000), nullable=True),
         sa.Column(
             "created_at",
