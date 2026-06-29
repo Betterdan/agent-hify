@@ -19,6 +19,7 @@ dependencies = [
     "email-validator>=2.2",
     "litellm>=1.55",
     "llama-index-core>=0.12",
+    "mcp>=1.0",
     "pypdf>=5.0",
     "python-multipart>=0.0.20",
 ]
@@ -171,4 +172,16 @@ forbidden_modules = [
 ]
 ignore_imports = [
     "agent_hify.modules.knowledge.router -> agent_hify.worker.tasks",
+]
+
+# tools(L2) 禁止依赖 knowledge/apps/runtime/worker（只能依赖 core/identity/observability/models）
+[[tool.importlinter.contracts]]
+name = "tools does not depend on upper layers"
+type = "forbidden"
+source_modules = ["agent_hify.modules.tools"]
+forbidden_modules = [
+    "agent_hify.modules.knowledge",
+    "agent_hify.modules.apps",
+    "agent_hify.modules.runtime",
+    "agent_hify.worker",
 ]

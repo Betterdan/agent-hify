@@ -37,6 +37,11 @@ class ErrorCode(IntEnum):
     DOC_NOT_FOUND = 43002
     DOC_INGEST_FAILED = 44001
 
+    # 5 tools
+    TOOL_NOT_FOUND = 53001
+    TOOL_CALL_FAILED = 54001
+    TOOL_DISABLED = 54002
+
     # 6 apps
     APP_NOT_FOUND = 60003
 
