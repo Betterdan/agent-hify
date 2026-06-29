@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TraceIn(BaseModel):
@@ -53,7 +54,7 @@ class UsageDailyOut(BaseModel):
 
 class AnnotationIn(BaseModel):
     message_id: int
-    rating: int  # -1, 0, or 1
+    rating: Annotated[int, Field(ge=-1, le=1)]
     comment: str | None = None
 
 

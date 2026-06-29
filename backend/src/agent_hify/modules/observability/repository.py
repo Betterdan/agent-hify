@@ -47,6 +47,7 @@ def upsert_annotation(session: Session, ann: Annotation) -> Annotation:
     if existing:
         existing.rating = ann.rating
         existing.comment = ann.comment
+        existing.updated_at = datetime.now(UTC)
         return existing
     session.add(ann)
     session.flush()
