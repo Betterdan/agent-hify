@@ -15,6 +15,7 @@ class AppConfigChat(BaseModel):
         default_factory=lambda: cast("dict[str, object]", {"temperature": 0.7, "max_tokens": 2048})
     )
     history_limit: int = 20
+    kb_ids: list[int] = Field(default_factory=list)
 
 
 class AppCreate(BaseModel):

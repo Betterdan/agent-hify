@@ -56,6 +56,19 @@ export interface ApiResponseCursorPageMessageOut {
   details?: ApiResponseCursorPageMessageOutDetails;
 }
 
+export type ApiResponseDocumentOutData = DocumentOut | null;
+
+export type ApiResponseDocumentOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseDocumentOutDetails = ApiResponseDocumentOutDetailsAnyOf | null;
+
+export interface ApiResponseDocumentOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseDocumentOutData;
+  details?: ApiResponseDocumentOutDetails;
+}
+
 export type ApiResponseInvokeResultData = InvokeResult | null;
 
 export type ApiResponseInvokeResultDetailsAnyOf = { [key: string]: unknown };
@@ -67,6 +80,19 @@ export interface ApiResponseInvokeResult {
   message?: string;
   data?: ApiResponseInvokeResultData;
   details?: ApiResponseInvokeResultDetails;
+}
+
+export type ApiResponseKnowledgeBaseOutData = KnowledgeBaseOut | null;
+
+export type ApiResponseKnowledgeBaseOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseKnowledgeBaseOutDetails = ApiResponseKnowledgeBaseOutDetailsAnyOf | null;
+
+export interface ApiResponseKnowledgeBaseOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseKnowledgeBaseOutData;
+  details?: ApiResponseKnowledgeBaseOutDetails;
 }
 
 export type ApiResponseModelOutData = ModelOut | null;
@@ -91,6 +117,32 @@ export interface ApiResponseNoneType {
   message?: string;
   data?: null;
   details?: ApiResponseNoneTypeDetails;
+}
+
+export type ApiResponseOffsetPageDocumentOutData = OffsetPageDocumentOut | null;
+
+export type ApiResponseOffsetPageDocumentOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseOffsetPageDocumentOutDetails = ApiResponseOffsetPageDocumentOutDetailsAnyOf | null;
+
+export interface ApiResponseOffsetPageDocumentOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseOffsetPageDocumentOutData;
+  details?: ApiResponseOffsetPageDocumentOutDetails;
+}
+
+export type ApiResponseOffsetPageKnowledgeBaseOutData = OffsetPageKnowledgeBaseOut | null;
+
+export type ApiResponseOffsetPageKnowledgeBaseOutDetailsAnyOf = { [key: string]: unknown };
+
+export type ApiResponseOffsetPageKnowledgeBaseOutDetails = ApiResponseOffsetPageKnowledgeBaseOutDetailsAnyOf | null;
+
+export interface ApiResponseOffsetPageKnowledgeBaseOut {
+  code?: number;
+  message?: string;
+  data?: ApiResponseOffsetPageKnowledgeBaseOutData;
+  details?: ApiResponseOffsetPageKnowledgeBaseOutDetails;
 }
 
 export type ApiResponseProviderOutData = ProviderOut | null;
@@ -191,6 +243,7 @@ export interface AppConfigChat {
   system_prompt?: string;
   params?: AppConfigChatParams;
   history_limit?: number;
+  kb_ids?: number[];
 }
 
 export type AppCreateType = typeof AppCreateType[keyof typeof AppCreateType];
@@ -230,6 +283,10 @@ export interface AppUpdate {
   name?: AppUpdateName;
   config?: AppUpdateConfig;
   status?: AppUpdateStatus;
+}
+
+export interface BodyUploadDocumentApiV1KnowledgeBasesKbIdDocumentsPost {
+  file: string;
 }
 
 export type ChatInputConversationId = number | null;
@@ -275,6 +332,19 @@ export interface CursorPageMessageOut {
   has_more?: boolean;
 }
 
+export type DocumentOutError = string | null;
+
+export interface DocumentOut {
+  id: number;
+  kb_id: number;
+  filename: string;
+  status: string;
+  error: DocumentOutError;
+  char_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HTTPValidationError {
   detail?: ValidationError[];
 }
@@ -289,6 +359,42 @@ export interface InvokeResult {
   tokens_out: number;
   cost: number;
   finish_reason: string;
+}
+
+export type KbConfigThreshold = number | null;
+
+export interface KbConfig {
+  chunk_size?: number;
+  overlap?: number;
+  top_k?: number;
+  threshold?: KbConfigThreshold;
+}
+
+export interface KnowledgeBaseCreate {
+  name: string;
+  embedding_model_id: number;
+  config?: KbConfig;
+}
+
+export type KnowledgeBaseOutConfig = { [key: string]: unknown };
+
+export interface KnowledgeBaseOut {
+  id: number;
+  workspace_id: number;
+  name: string;
+  embedding_model_id: number;
+  config: KnowledgeBaseOutConfig;
+  created_at: string;
+  updated_at: string;
+}
+
+export type KnowledgeBaseUpdateName = string | null;
+
+export type KnowledgeBaseUpdateConfig = KbConfig | null;
+
+export interface KnowledgeBaseUpdate {
+  name?: KnowledgeBaseUpdateName;
+  config?: KnowledgeBaseUpdateConfig;
 }
 
 export interface LoginIn {
@@ -339,6 +445,24 @@ export interface ModelOut {
   capabilities: string[];
   embedding_dim: ModelOutEmbeddingDim;
   enabled: boolean;
+}
+
+export type OffsetPageDocumentOutTotal = number | null;
+
+export interface OffsetPageDocumentOut {
+  items: DocumentOut[];
+  total?: OffsetPageDocumentOutTotal;
+  page?: number;
+  page_size?: number;
+}
+
+export type OffsetPageKnowledgeBaseOutTotal = number | null;
+
+export interface OffsetPageKnowledgeBaseOut {
+  items: KnowledgeBaseOut[];
+  total?: OffsetPageKnowledgeBaseOutTotal;
+  page?: number;
+  page_size?: number;
 }
 
 export type ProviderInType = typeof ProviderInType[keyof typeof ProviderInType];
@@ -423,6 +547,30 @@ export interface ValidationError {
   input?: unknown;
   ctx?: ValidationErrorCtx;
 }
+
+export type ListKbsApiV1KnowledgeBasesGetParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+page_size?: number;
+};
+
+export type ListDocumentsApiV1KnowledgeBasesKbIdDocumentsGetParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+page_size?: number;
+};
 
 export type ListConversationsApiV1AppsAppIdConversationsGetParams = {
 cursor?: string | null;

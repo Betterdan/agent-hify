@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
@@ -14,12 +15,16 @@ from agent_hify.core.exceptions import AppError, NotFoundError, ValidationError
 from agent_hify.core.pagination import CursorPage, decode_cursor, encode_cursor
 from agent_hify.modules.apps import service as apps_service
 from agent_hify.modules.apps.schemas import AppConfigChat
+from agent_hify.modules.knowledge import service as knowledge_service
+from agent_hify.modules.knowledge.schemas import RetrievedChunk
 from agent_hify.modules.models import service as models_service
 from agent_hify.modules.observability import service as obs_service
 from agent_hify.modules.observability.schemas import TraceIn
 from agent_hify.modules.runtime import repository
 from agent_hify.modules.runtime.models import Conversation, Message
 from agent_hify.modules.runtime.schemas import ChatInput, ConversationOut, MessageOut
+
+logger = logging.getLogger(__name__)
 
 
 def _sse(event: str, data: dict[str, object]) -> str:
@@ -124,6 +129,38 @@ async def run_chat(
             llm_messages.append({"role": "system", "content": config.system_prompt})
         for m in history:
             llm_messages.append({"role": m.role, "content": _text_of(m.content)})
+
+        # RAG 检索：kb_ids 非空时 embed 用户消息并检索 context
+        retrieved: list[RetrievedChunk] = []
+        for kb_id in config.kb_ids:
+            try:
+                chunks = await knowledge_service.retrieve(
+                    session,
+                    kb_id=kb_id,
+                    workspace_id=workspace_id,
+                    query=payload.message,
+                )
+                retrieved.extend(chunks)
+            except Exception as exc:
+                logger.warning("RAG retrieve kb_id=%d failed: %s", kb_id, exc)
+
+        if retrieved:
+            context_text = "\n\n---\n".join(c.content for c in retrieved)
+            rag_msg = {"role": "system", "content": f"参考资料：\n{context_text}"}
+            insert_pos = 1 if llm_messages and llm_messages[0]["role"] == "system" else 0
+            llm_messages.insert(insert_pos, rag_msg)
+            obs_service.record_trace(
+                session,
+                TraceIn(
+                    workspace_id=workspace_id,
+                    type="retrieval",
+                    status="ok",
+                    app_id=app_id,
+                    conversation_id=conv.id,
+                    input={"query": payload.message, "kb_ids": list(config.kb_ids)},
+                    output={"chunk_count": len(retrieved)},
+                ),
+            )
 
         extra_params: dict[str, object] = dict(config.params)
         usage_sink: dict[str, object] = {}

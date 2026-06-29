@@ -70,6 +70,7 @@ def test_chat_streams_and_persists(monkeypatch: pytest.MonkeyPatch) -> None:
         ref: object,
         messages: object,
         usage_sink: dict[str, object] | None = None,
+        extra_params: dict[str, object] | None = None,
     ) -> AsyncGenerator[str, None]:
         for token in ["你", "好", "！"]:
             yield token
@@ -121,6 +122,7 @@ def test_chat_continues_existing_conversation(monkeypatch: pytest.MonkeyPatch) -
         ref: object,
         messages: object,
         usage_sink: dict[str, object] | None = None,
+        extra_params: dict[str, object] | None = None,
     ) -> AsyncGenerator[str, None]:
         yield "ok"
 
