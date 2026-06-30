@@ -20,9 +20,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | [.ai/memory/user-profile.md](.ai/memory/user-profile.md) | 用户 Dan 的背景、偏好、授权范围 |
 | [.ai/memory/feedback.md](.ai/memory/feedback.md) | 从协作历史提炼的行为规范 |
 | [.ai/memory/project-state.md](.ai/memory/project-state.md) | 当前项目状态、遗留问题、环境速查 |
-| [.ai/skills/sdd.md](.ai/skills/sdd.md) | SDD 执行方法论（有多任务计划时使用） |
-| [.ai/skills/architecture.md](.ai/skills/architecture.md) | 架构纪律检查清单 |
-| [.ai/skills/code-quality.md](.ai/skills/code-quality.md) | 编码质量标准 |
+| [.ai/framework/skills/sdd.md](.ai/framework/skills/sdd.md) | SDD 执行方法论（有多任务计划时使用） |
+| [.ai/skills/architecture.md](.ai/skills/architecture.md) | 架构纪律检查清单（项目专属） |
+| [.ai/skills/code-quality.md](.ai/skills/code-quality.md) | 编码质量标准（项目专属扩展） |
+| [.ai/framework/skills/code-quality.md](.ai/framework/skills/code-quality.md) | 编码质量标准（通用原则） |
 
 ## 关键文档（动手前先读）
 
@@ -79,6 +80,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **不确定时**：架构选择给 2–3 个方案对比，由用户拍板；规范没覆盖的情况先问用户，不自己编规矩。
 - **重复行为提议设 skill**：发现某操作是重复指令、或属于可定义可参照的重复行为时，先提议让用户决定是否定义为 skill。
 - 数据表/索引/分页/空值/错误码等规范遵循 `docs/standards.md`；新增表/接口按其核查（可用 `schema-review` skill）。
+
+### Superpowers 路径覆盖
+
+- **计划文档存放**：`docs/plans/`（覆盖 superpowers 默认的 `docs/superpowers/plans/`）
+- **规格文档存放**：`docs/specs/`（覆盖 superpowers 默认的 `docs/superpowers/specs/`）
 
 ### 协作约束
 - **Git**：用户已授权 Claude 在**本项目**执行 git 写操作（add/commit/push）。提交信息用中文，遵循现有提交风格；提交前先 `git status`/`git diff` 核对范围，不擅自提交无关改动；如在默认分支 `main` 上则先建分支。push 等外发操作前向用户确认。

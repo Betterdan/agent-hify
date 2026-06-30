@@ -1,5 +1,7 @@
-# Skill: 编码质量标准
+# Skill: 编码质量标准（agent-hify 项目扩展）
 
+> 本文件是 `.ai/framework/skills/code-quality.md` 的项目扩展，包含 agent-hify 专属工具链、规范和红线。
+> 通用原则见 framework 版本；本文件只记录项目特定内容。
 > 实现时遵循，评审时核查。适用于 agent-hify 全栈（FastAPI 后端 + React 前端）。
 
 ---
