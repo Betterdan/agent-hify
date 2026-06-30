@@ -10,6 +10,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 第一版硬核：模型管理（含视觉输入）→ 聊天助手 → RAG → 工具集成（MCP + 外部 API）→ Agent → 可观测基线 + 评估钩子。**工作流编排不在第一版**（阶段性大件）。
 
+## 跨 Agent 共享知识（每次会话先读）
+
+`.ai/` 目录是 **agent-agnostic** 的项目知识库，Claude Code / Codex CLI / 其他工具共享：
+
+| 文件 | 用途 |
+|---|---|
+| [.ai/memory/MEMORY.md](.ai/memory/MEMORY.md) | **记忆索引**（必读，了解用户和项目当前状态） |
+| [.ai/memory/user-profile.md](.ai/memory/user-profile.md) | 用户 Dan 的背景、偏好、授权范围 |
+| [.ai/memory/feedback.md](.ai/memory/feedback.md) | 从协作历史提炼的行为规范 |
+| [.ai/memory/project-state.md](.ai/memory/project-state.md) | 当前项目状态、遗留问题、环境速查 |
+| [.ai/skills/sdd.md](.ai/skills/sdd.md) | SDD 执行方法论（有多任务计划时使用） |
+| [.ai/skills/architecture.md](.ai/skills/architecture.md) | 架构纪律检查清单 |
+| [.ai/skills/code-quality.md](.ai/skills/code-quality.md) | 编码质量标准 |
+
 ## 关键文档（动手前先读）
 
 | 文档 | 作用 |
