@@ -85,27 +85,10 @@
 
 ---
 
-## 2bis. 实现与评审的实战纪律（P0 实践归纳，2026-06-28）
+## 2bis. P0 实战归纳
 
-> 这是 ⑦⑧⑨ 在本项目实际跑出来的可复用纪律，归纳自 P0-1（骨架）、P0-2（core+identity）。
-
-### 执行模式：先逐任务评审 → 改为「批量实现 + 全分支总评审」
-- 初期用 subagent 逐任务实现+逐任务评审；过程中**由项目所有者改为批量模式**：一个子代理按整份计划批量 TDD 实现，**去掉每任务评审**，改为每份计划末做**全分支总评审**，再由控制器（主 agent）对风险点定点核验。
-- 取舍：逐任务评审反馈密但开销大；批量+总评审在"小步可控"与"评审成本"间更平衡。**模式本身是可调参数，按阶段风险和信任度选。**
-- 配套账本：用一份 durable 的 SDD 进度账本（`.superpowers/sdd/progress.md`）记每任务状态、累积 Minor、决策裁断，跨上下文压缩靠它 + git log 接续。
-
-### 评审纪律：绿灯 ≠ 正确
-- **全量测试绿仍可能藏 bug**——因为测试只覆盖了被想到的路径。P0-2 的真实案例：统一错误信封在校验错误 `ctx` 含异常实例时会在异常处理器内崩成 500、绕过"始终 200"约定，但 24 个测试全绿，因为它们只喂了 JSON-safe 的输入。
-- 推论：**总评审要主动打"未被测的边角/异常/序列化路径"**，尤其中央收口处（统一响应、异常处理器、鉴权、迁移）。绿灯是必要条件，不是充分条件。
-
-### 修复纪律：先复现再修（TDD 用于 bug）
-- 修 bug 前先写一个**能让 bug 现形为失败测试**的用例（如先复现出 `TypeError`），看它失败，再改实现到它转绿。避免"自以为修好"。
-
-### 契约/约束：实测而非纸面推断
-- 架构守护（如 import-linter 分层契约）的行为要**实跑验证**，不靠文档推断。P0-2 实测发现：forbidden 列父包 `agent_hify.modules` 时，源模块 import 自身子模块**不误报**——这与计划里"可能误报"的担忧相反。**纸面假设要被一条命令证伪/证实。**
-
-### 控制器定点核验：假阳性也要查证
-- 评审报的 Important/Critical，控制器要对风险点（迁移渲染、`-W error` 弃用警告、安全默认值、DB 实际行为）**实查证据**再裁断。P0 出现过多次"评审报 Important 实为假阳性"（如 server_default 渲染、sessionmaker 告警），均以实查 DB / 实跑 `-W error` 推翻。**裁断要有证据，不照单全收也不轻易驳回。**
+> 实战纪律详见 [`docs/methodology/learnings-p0.md`](./docs/methodology/learnings-p0.md)。
+> 本节不重复内容，保持 METHODOLOGY.md 专注于核心框架。
 
 ---
 
@@ -122,39 +105,6 @@
 | ⑦ 工程搭建 | ✅ P0-1（后端骨架：Docker/Alembic+pgvector/Celery/import-linter，一键起） |
 | ⑧ 功能实现 | ✅ P0-2（core 横切 + identity 登录鉴权）；✅ P0-3（models 模型网关 + observability 基线 + 外部调用韧性）；✅ P0-4（前端控制台：Vite+React+TS+orval）；✅ P0-5（聊天助手 + SSE 流式）；✅ P0-6（RAG 知识库 + Celery 摄取 + pgvector 检索）；✅ P0-7（工具集成：builtin/api/mcp + 协议层）；✅ P0-8（ReAct Agent 循环 + step SSE 事件）；✅ P0-9（Annotation 评分 + eval_events + 增强 trace 查询） |
 | ⑨⑩ 测试/部署 | 集成测试覆盖全链路（每功能阶段 2–5 tests）；部署待补（Docker Compose 配置基础存在）；见 §2bis + §2ter |
-
----
-
-## 2ter. P0-5～P0-9 SDD 深化阶段归纳（2026-06-29）
-
-> 在 §2bis 批量+总评审基础上，P0-5～P0-9 改回逐任务 SDD（每任务独立子代理实现 + 评审 + 修复）并稳定运行，补充以下实战纪律。
-
-### SDD 节奏：逐任务实现+评审并行可折叠
-
-- 实现代理 Task N 运行期间，同时写 Task N+1 brief 并派发，显著节省 wall-clock。前提：两任务对同一模块无写冲突。
-- 评审代理输出一个独立报告文件而非在主上下文展开，是保持控制器上下文干净的关键（file handoff 原则）。
-
-### 架构守护：import-linter 作为实施约束的最后一道防线
-
-- P0-7→P0-8 的工具调用要求 runtime 依赖 tools，必须在 `pyproject.toml` 中更新 import-linter 合约才能让实现通过。**依赖层变化必须对应合约变更，两者同步提交**，否则 CI 红灯即时暴露。
-- 跨层边界的"只走 service 接口"原则（禁止 import 其他模块的 repository/models）在 SDD 中由评审代理在代码层面核验，配合 import-linter 机器检查，双重保障。
-
-### 安全性：信息泄漏是 SSE 流式架构的易犯问题
-
-- 因异常在 `finally` 中 yield，`str(exc)` 会把 Pydantic 字段名、SQLAlchemy SQL 片段、API key 路径等内部信息直接送达浏览器。**所有 SSE 异常分支须用固定字符串 + logger.error，不直接序列化 exc**（P0-8 最终评审发现并修复）。
-
-### 竞态安全：DB 原子操作替代读-改-写
-
-- "Upsert" 若用 read-then-write（TOCTOU），在并发场景下两个请求同时到达会触发 unique constraint 500。解决方案：用 `pg_insert ... ON CONFLICT DO UPDATE`，让 PostgreSQL 原子执行，避免中间状态（P0-9 最终评审发现，用已导入的 `pg_insert` 一次修复）。
-- 同一文件内已有的原子 upsert 范例（`upsert_usage`）是"已存在的模式即规范"——实现新函数时先查同文件是否有可复用模式。
-
-### 已知局限账本（Minor deferred）
-
-每阶段评审积累的 Minor 不立即修复，写入进度账本，供最终评审或下阶段集中处理。这种"有意延后"而非静默忽略的做法，让技术债可见且可控：
-- 工具调用步骤未持久化到 Message 表（multi-turn agent 会丢失工具历史 context）
-- 无 AbortController 中止 SSE fetch（切换页面时 stream 继续跑）
-- AgentPage 消息气泡用 `<Tag>` 而非 `<Typography.Paragraph>`（长文换行体验差）
-- ChatPage lastMsgId 未在切换历史对话时重置（评分可能对应错误 message_id）
 
 ---
 
